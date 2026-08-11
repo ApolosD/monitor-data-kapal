@@ -19,7 +19,6 @@ try:
     MIKROTIK_PASS = st.secrets["MIKROTIK_PASS"]
 except Exception:
     # Fallback kosong agar aman saat di-upload ke GitHub Publik
-    # (Untuk testing lokal di laptop, gunakan file .streamlit/secrets.toml)
     MIKROTIK_HOST = ""
     MIKROTIK_PORT = 0
     MIKROTIK_USER = ""
@@ -103,7 +102,7 @@ else:
 
         parsed_data.append({
             "User": nama,
-            "Total Pakai (GiB)": total_gib,
+            "Total Pakai (GiB)": f"{total_gib:.2f} GiB", # Format rapi 2 desimal
             "Limit Sistem": limit_str,
             "Persentase": persentase_str,
             "Status": status,
