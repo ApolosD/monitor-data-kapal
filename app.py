@@ -18,11 +18,12 @@ try:
     MIKROTIK_USER = st.secrets["MIKROTIK_USER"]
     MIKROTIK_PASS = st.secrets["MIKROTIK_PASS"]
 except Exception:
-    # Fallback untuk testing lokal di laptop Anda
-    MIKROTIK_HOST = "idn24.tunnel.id"
-    MIKROTIK_PORT = 3074
-    MIKROTIK_USER = "admin"
-    MIKROTIK_PASS = "Leitjeoke@18"
+    # Fallback kosong agar aman saat di-upload ke GitHub Publik
+    # (Untuk testing lokal di laptop, gunakan file .streamlit/secrets.toml)
+    MIKROTIK_HOST = ""
+    MIKROTIK_PORT = 0
+    MIKROTIK_USER = ""
+    MIKROTIK_PASS = ""
 
 @st.cache_data(ttl=60)
 def ambil_data_mikrotik():
@@ -61,7 +62,7 @@ st.subheader("👥 Rekapitulasi Pengguna Hotspot Mikrotik")
 raw_data = ambil_data_mikrotik()
 
 if raw_data is None:
-    st.error("[GAGAL] Tidak dapat terhubung ke Mikrotik via tunnel.id. Pastikan router online.")
+    st.error("[GAGAL] Tidak dapat terhubung ke Mikrotik via tunnel.id. Pastikan router online atau konfigurasi Secrets sudah benar.")
 elif not raw_data:
     st.warning("Data hotspot kosong.")
 else:
