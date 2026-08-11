@@ -7,7 +7,7 @@ import datetime
 st.set_page_config(page_title="Monitoring Jaringan Kapal", layout="wide")
 
 st.title("🌐 MONITORING JARINGAN KAPAL (STARLINK & MIKROTIK)")
-st.write(f"Waktu Akses: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')} UTC")
+st.write(f"Waktu Akses: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')} WIB")
 
 # ==========================================
 # KONFIGURASI KONEKSI MIKROTIK (AMAN / SECRETS)
@@ -18,7 +18,6 @@ try:
     MIKROTIK_USER = st.secrets["MIKROTIK_USER"]
     MIKROTIK_PASS = st.secrets["MIKROTIK_PASS"]
 except Exception:
-    # Fallback kosong agar aman saat di-upload ke GitHub Publik
     MIKROTIK_HOST = ""
     MIKROTIK_PORT = 0
     MIKROTIK_USER = ""
@@ -34,10 +33,11 @@ def ambil_data_mikrotik():
             port=MIKROTIK_PORT
         )
         list_user = list(api.path('ip', 'hotspot', 'user'))
+        list_active = list(api.path('ip', 'hotspot', 'active'))
         api.close()
-        return list_user
+        return list_user, list_active
     except Exception as e:
-        return None
+        return None, None
 
 # Sidebar untuk Input Data Starlink
 st.sidebar.header("📡 Konfigurasi Starlink")
@@ -46,27 +46,54 @@ used_gb = st.sidebar.number_input("Total Terpakai Saat Ini (GB)", value=564.0)
 sisa_hari = st.sidebar.number_input("Sisa Hari Siklus", value=13, step=1)
 tanggal_reset = st.sidebar.text_input("Tanggal Reset", value="25/08/2026")
 
-# Tampilkan Status Starlink di Bagian Atas Web
-st.subheader("📊 Status Starlink (Global)")
+# Ambil Data dari Mikrotik
+raw_users, raw_active = ambil_data_mikrotik()
+
+# Hitung Total Penggunaan Seluruh User Mikrotik
+total_mikrotik_gib = 0.0
+if raw_users:
+    for u in raw_users:
+        b_in = int(u.get('bytes-in', 0))
+        b_out = int(u.get('bytes-out', 0))
+        total_mikrotik_gib += (b_in + b_out) / (1024 ** 3)
+total_mikrotik_gib = round(total_mikrotik_gib, 2)
+
+# Hitung Total Penggunaan Active Users
+total_active_gib = 0.0
+jumlah_active = 0
+if raw_active:
+    jumlah_active = len(raw_active)
+    for act in raw_active:
+        a_in = int(act.get('bytes-in', 0))
+        a_out = int(act.get('bytes-out', 0))
+        total_active_gib += (a_in + a_out) / (1024 ** 3)
+total_active_gib = round(total_active_gib, 2)
+
+# Selisih / Lost Data (Starlink Terpakai dikurangi Total Mikrotik Users)
+selisih_lost_data = round(used_gb - total_mikrotik_gib, 2)
+
+# Tampilkan Status Starlink & Perbandingan Global
+st.subheader("📊 Status Starlink & Perbandingan Jaringan")
 sisa_kuota = round(total_gb - used_gb, 2)
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Kuota", f"{total_gb} GB")
-col2.metric("Total Terpakai", f"{used_gb} GB", delta=f"-{used_gb} GB")
-col3.metric("Sisa Kuota", f"{sisa_kuota} GB", delta="Aman" if sisa_kuota > 100 else "Kritis")
+
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Starlink Terpakai", f"{used_gb} GB")
+col2.metric("Total Mikrotik Users", f"{total_mikrotik_gib} GiB")
+col3.metric("Hotspot Active ({jumlah_active} User)", f"{total_active_gib} GiB")
+col4.metric("Estimasi Data Lost", f"{selisih_lost_data} GiB", delta="Selisih Loss" if selisih_lost_data > 0 else "Normal", delta_color="inverse")
 
 st.markdown("---")
 
-# Ambil dan Proses Data Mikrotik
+# Ambil dan Proses Data Mikrotik untuk Tabel
 st.subheader("👥 Rekapitulasi Pengguna Hotspot Mikrotik")
-raw_data = ambil_data_mikrotik()
 
-if raw_data is None:
+if raw_users is None:
     st.error("[GAGAL] Tidak dapat terhubung ke Mikrotik via tunnel.id. Pastikan router online atau konfigurasi Secrets sudah benar.")
-elif not raw_data:
+elif not raw_users:
     st.warning("Data hotspot kosong.")
 else:
     parsed_data = []
-    for u in raw_data:
+    for u in raw_users:
         nama = u.get('name', 'Unknown')
         bytes_in = int(u.get('bytes-in', 0))
         bytes_out = int(u.get('bytes-out', 0))
@@ -85,7 +112,6 @@ else:
             persentase = (total_gib / limit_gib) * 100
             persentase_str = f"{persentase:.2f} %"
             
-            # Perhitungan status dengan detail kelebihan (overlimit)
             if total_gib > limit_gib:
                 over_amount = round(total_gib - limit_gib, 2)
                 status = f"OVER LIMIT! (+{over_amount:.2f} GiB)"
@@ -102,7 +128,7 @@ else:
 
         parsed_data.append({
             "User": nama,
-            "Total Pakai (GiB)": f"{total_gib:.2f} GiB", # Format rapi 2 desimal
+            "Total Pakai (GiB)": f"{total_gib:.2f} GiB",
             "Limit Sistem": limit_str,
             "Persentase": persentase_str,
             "Status": status,
@@ -111,7 +137,6 @@ else:
 
     df = pd.DataFrame(parsed_data)
 
-    # Fungsi untuk memberikan warna latar belakang berdasarkan Status
     def warnai_status(val):
         if "OVER LIMIT!" in val:
             return 'background-color: #ffcccc; color: #990000; font-weight: bold;'
@@ -125,9 +150,7 @@ else:
             return 'background-color: #e6ffed; color: #006622;'
         return ''
 
-    # Terapkan styling warna pada kolom Status
     df_styled = df.drop(columns=["_raw_total"]).style.map(warnai_status, subset=['Status'])
 
-    # Tampilkan tabel interaktif di web
     st.dataframe(df_styled, width='stretch')
     st.info("💡 Data di atas diambil langsung secara real-time dari router Mikrotik kapal.")
