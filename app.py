@@ -7,7 +7,7 @@ import datetime
 st.set_page_config(page_title="Monitoring Jaringan Kapal", layout="wide")
 
 st.title("🌐 MONITORING JARINGAN KAPAL (STARLINK & MIKROTIK)")
-st.write(f"Waktu Akses: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')} WIB")
+st.write(f"Waktu Akses: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')} UTC")
 
 # ==========================================
 # KONFIGURASI KONEKSI MIKROTIK (AMAN / SECRETS)
