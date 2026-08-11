@@ -69,17 +69,19 @@ if raw_active:
         total_active_gib += (a_in + a_out) / (1024 ** 3)
 total_active_gib = round(total_active_gib, 2)
 
-# Selisih / Lost Data (Starlink Terpakai dikurangi Total Mikrotik Users)
+# Selisih / Lost Data
 selisih_lost_data = round(used_gb - total_mikrotik_gib, 2)
 
-# Tampilkan Status Starlink & Perbandingan Global
+# Tampilkan Status Starlink & Perbandingan Global (Dibagi 2 Baris agar Tidak Terpotong di HP)
 st.subheader("📊 Status Starlink & Perbandingan Jaringan")
 sisa_kuota = round(total_gb - used_gb, 2)
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2 = st.columns(2)
 col1.metric("Starlink Terpakai", f"{used_gb} GB")
 col2.metric("Total Mikrotik Users", f"{total_mikrotik_gib} GiB")
-col3.metric("Hotspot Active ({jumlah_active} User)", f"{total_active_gib} GiB")
+
+col3, col4 = st.columns(2)
+col3.metric(f"Hotspot Active ({jumlah_active} User)", f"{total_active_gib} GiB")
 col4.metric("Estimasi Data Lost", f"{selisih_lost_data} GiB", delta="Selisih Loss" if selisih_lost_data > 0 else "Normal", delta_color="inverse")
 
 st.markdown("---")
