@@ -20,12 +20,17 @@ def load_config():
       "used_gb": 564.0,
       "sisa_hari": 13,
       "tanggal_reset": "25/08/2026",
+      "alokasi_bosun": 10.0,
+      "cadangan_sisa": 22.0,
+      "catatan_backup": "10 GB dialokasikan untuk Bosun, sisa 22 GB untuk backup data lost",
       "last_updated": "Belum pernah diupdate",
   }
 
 
 def save_config(data):
-  data["last_updated"] = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+  # Waktu Lokal WIB (UTC+7)
+  wib_time = datetime.datetime.utcnow() + datetime.timedelta(hours=7)
+  data["last_updated"] = wib_time.strftime("%d/%m/%Y %H:%M:%S")
   with open(CONFIG_FILE, "w") as f:
     json.dump(data, f)
 
@@ -49,10 +54,13 @@ addons_list = load_addons()
 # Konfigurasi Halaman Web
 st.set_page_config(page_title="Monitoring Jaringan Kapal", layout="wide")
 
+# Waktu Akses Akurat WIB (UTC+7)
+waktu_wib = (
+    datetime.datetime.utcnow() + datetime.timedelta(hours=7)
+).strftime("%d/%m/%Y %H:%M:%S")
+
 st.title("🌐 MONITORING JARINGAN KAPAL (STARLINK & MIKROTIK)")
-st.write(
-    f"Waktu Akses: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')} WIB"
-)
+st.write(f"Waktu Akses: {waktu_wib} WIB")
 
 # ==========================================
 # KONFIGURASI KONEKSI MIKROTIK (AMAN / SECRETS)
@@ -111,6 +119,36 @@ with st.sidebar.form("config_form"):
   tanggal_reset = st.text_input(
       "Tanggal Reset", value=str(config["tanggal_reset"])
   )
+
+  st.markdown("---")
+  st.markdown("⚙️ **Pengaturan Alokasi & Backup**")
+  alokasi_bosun = st.number_input(
+      "Alokasi Khusus Bosun (GB)",
+      value=float(config.get("alokasi_bosun", 10.0)),
+      step=1.0,
+      help="Masukkan 0 jika bulan ini tidak diberikan ke Bosun",
+  )
+  cadangan_sisa = st.number_input(
+      "Cadangan Sisa / Backup (GB)",
+      value=float(config.get("cadangan_sisa", 22.0)),
+      step=1.0,
+      help="Sisa backup untuk meredam data lost",
+  )
+  catatan_backup = st.text_area(
+      "Keterangan Penggunaan Backup",
+      value=str(
+          config.get(
+              "catatan_backup",
+              "10 GB dialokasikan untuk Bosun, sisa 22 GB untuk backup data"
+              " lost",
+          )
+      ),
+      help=(
+          "Jelaskan ke mana alokasi backup ini diberikan bulan ini (misal:"
+          " Tanpa Bosun / Dengan Bosun)"
+      ),
+  )
+
   submit_config = st.form_submit_button(label="💾 Simpan Konfigurasi")
 
   if submit_config:
@@ -118,6 +156,9 @@ with st.sidebar.form("config_form"):
     config["used_gb"] = used_gb
     config["sisa_hari"] = sisa_hari
     config["tanggal_reset"] = tanggal_reset
+    config["alokasi_bosun"] = alokasi_bosun
+    config["cadangan_sisa"] = cadangan_sisa
+    config["catatan_backup"] = catatan_backup
     save_config(config)
     st.sidebar.success("Konfigurasi berhasil disimpan!")
     st.rerun()
@@ -176,14 +217,27 @@ if raw_active:
     total_active_gib += (a_in + a_out) / (1024**3)
 total_active_gib = round(total_active_gib, 2)
 
-# --- REVISI KALKULASI DATA LOST ---
-# Rumus: Estimasi Data Lost = (Total Pemakaian - Total Kuota) + 22GB (Cadangan)
-# Total Pemakaian = Starlink Terpakai + Hotspot Active
-CADANGAN_DATA = 22.0
+# --- KALKULASI DATA LOST DINAMIS ---
 total_pemakaian = config["used_gb"] + total_active_gib
+aktif_alokasi_bosun = config.get("alokasi_bosun", 10.0)
+aktif_cadangan = config.get("cadangan_sisa", 22.0)
+
+# Rumus kalkulasi data lost dengan memperhitungkan cadangan & alokasi
 estimasi_data_lost = round(
-    (total_pemakaian - config["total_gb"]) + CADANGAN_DATA, 2
+    (total_pemakaian - config["total_gb"]) + (aktif_cadangan + aktif_alokasi_bosun),
+    2,
 )
+
+# Status Dinamis Berdasarkan Hasil Plus / Minus
+if estimasi_data_lost < 0:
+  status_data_text = (
+      "Sisa data tidak aman / tidak mencukupi untuk kebutuhan data setiap"
+      " crew"
+  )
+  delta_color_val = "normal"  # Menandakan peringatan (merah/oranye)
+else:
+  status_data_text = "Kelebihan data untuk Backupan (Aman)"
+  delta_color_val = "inverse"  # Menandakan aman (hijau)
 
 # Tampilkan Status Starlink & Perbandingan Global
 st.subheader("📊 Status Starlink & Perbandingan Jaringan")
@@ -199,8 +253,13 @@ col3.metric(
 col4.metric(
     "Estimasi Data Lost",
     f"{estimasi_data_lost} GB",
-    delta="Cadangan Aman" if estimasi_data_lost < 0 else "KEHILANGAN DATA!",
-    delta_color="inverse",
+    delta=status_data_text,
+    delta_color=delta_color_val,
+)
+
+# Menampilkan Catatan Alokasi Backup agar jelas peruntukannya
+st.info(
+    f"📝 **Catatan Alokasi Backup Bulan Ini:** {config.get('catatan_backup')}"
 )
 
 st.markdown("---")
