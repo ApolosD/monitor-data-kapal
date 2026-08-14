@@ -206,14 +206,14 @@ if raw_users:
     b_in = int(u.get("bytes-in", 0))
     b_out = int(u.get("bytes-out", 0))
     total_bytes = b_in + b_out
-    total_gib = total_bytes / (1000**3)
-    total_mikrotik_gb += total_gib
+    total_gb = total_bytes / (1000**3)
+    total_mikrotik_gb += total_gb
 
     # Hitung sisa limit per user jika memiliki limit sistem
     limit_bytes_raw = u.get("limit-bytes-total", 0)
     if limit_bytes_raw and int(limit_bytes_raw) > 0:
       limit_gb = int(limit_bytes_raw) / (1000**3)
-      sisa_user = limit_gb - total_gib
+      sisa_user = limit_gb - total_gb
       if sisa_user > 0:
         total_sisa_limit_crew += sisa_user
 
@@ -231,28 +231,20 @@ if raw_active:
     total_active_gb += (a_in + a_out) / (1000**3)
 total_active_gb = round(total_active_gb, 2)
 
-# --- KONSEP PERBANDINGAN SISA STARLINK VS SISA LIMIT CREW ---
-# 1. Sisa Kuota Riil Starlink (Pusat)
+# --- PERBANDINGAN SISA STARLINK VS SISA LIMIT CREW ---
 sisa_starlink = round(config["total_gb"] - config["used_gb"], 2)
-
-# 2. Total Cadangan (Cadangan Sisa + Alokasi Bosun)
 total_cadangan = config.get("cadangan_sisa", 22.0) + config.get(
     "alokasi_bosun", 10.0
 )
-
-# 3. Estimasi Selisih / Data Lost Terhadap Sisa Limit Crew
-# Membandingkan seberapa jauh selisih antara sisa kuota pusat dengan sisa jatah anak buah
 selisih_sisa_data = round(sisa_starlink - total_sisa_limit_crew, 2)
 
-# Status Dinamis
+# Status Dinamis dengan Teks Ringkas & Warna Merah (Normal) jika Over-limit/Tidak Aman
 if selisih_sisa_data < 0:
-  status_data_text = (
-      "Sisa kuota Starlink lebih kecil dari jatah crew (Waspada Over-limit)"
-  )
-  delta_color_val = "normal"
+  status_data_text = "⚠️ WARNING: Over-limit / Jatah Crew Kurang!"
+  delta_color_val = "normal"  # Menampilkan warna merah (urgent)
 else:
-  status_data_text = "Sisa kuota Starlink selaras / mencukupi (Aman)"
-  delta_color_val = "inverse"
+  status_data_text = "✅ AMAN: Kuota Mencukupi"
+  delta_color_val = "inverse"  # Menampilkan warna hijau (aman)
 
 # Tampilkan Status Starlink & Perbandingan Global
 st.subheader("📊 Status Starlink & Perbandingan Jaringan")
@@ -263,7 +255,13 @@ col2.metric("Total Sisa Limit Crew (Lokal)", f"{total_sisa_limit_crew} GB")
 
 col3, col4 = st.columns(2)
 col3.metric("Starlink Terpakai", f"{config['used_gb']} GB")
-col4.metric(
+col4.metric("Total Mikrotik Users", f"{total_mikrotik_gb} GB")
+
+col5, col6 = st.columns(2)
+col5.metric(
+    f"Hotspot Active ({jumlah_active} User)", f"{total_active_gb} GB"
+)
+col6.metric(
     "Selisih Sisa Pusat vs Lokal",
     f"{selisih_sisa_data} GB",
     delta=status_data_text,
