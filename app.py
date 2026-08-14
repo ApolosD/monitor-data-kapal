@@ -256,7 +256,7 @@ col2.metric("Total Sisa Limit Crew (Lokal)", f"{total_sisa_limit_crew_gb} GB")
 
 col3, col4 = st.columns(2)
 col3.metric("Starlink Terpakai", f"{config['used_gb']} GB")
-col4.metric("Total Mikrotik Users", f"{total_mikrotik_gib} GB")
+col4.metric("Total Mikrotik Users", f"{total_mikrotik_gb} GB")
 
 col5, col6 = st.columns(2)
 col5.metric(
