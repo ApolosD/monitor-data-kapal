@@ -17,8 +17,8 @@ def load_config():
       return json.load(f)
   return {
       "total_gb": 750.0,
-      "used_gb": 564.0,
-      "sisa_hari": 13,
+      "used_gb": 674.0,
+      "sisa_hari": 10,
       "tanggal_reset": "25/08/2026",
       "alokasi_bosun": 10.0,
       "cadangan_sisa": 22.0,
@@ -197,16 +197,30 @@ if addons_list:
 # Ambil Data dari Mikrotik
 raw_users, raw_active = ambil_data_mikrotik()
 
-# Hitung Total Penggunaan Seluruh User Mikrotik (Dikonversi ke GB Desimal: 10^9 bytes)
+# 1. Hitung Total Penggunaan Seluruh User Mikrotik (GB Desimal) & Akumulasi Sisa Limit Crew
 total_mikrotik_gb = 0.0
+total_sisa_limit_crew = 0.0
+
 if raw_users:
   for u in raw_users:
     b_in = int(u.get("bytes-in", 0))
     b_out = int(u.get("bytes-out", 0))
-    total_mikrotik_gb += (b_in + b_out) / (1000**3)
-total_mikrotik_gb = round(total_mikrotik_gb, 2)
+    total_bytes = b_in + b_out
+    total_gib = total_bytes / (1000**3)
+    total_mikrotik_gb += total_gib
 
-# Hitung Total Penggunaan Active Users (Dikonversi ke GB Desimal)
+    # Hitung sisa limit per user jika memiliki limit sistem
+    limit_bytes_raw = u.get("limit-bytes-total", 0)
+    if limit_bytes_raw and int(limit_bytes_raw) > 0:
+      limit_gb = int(limit_bytes_raw) / (1000**3)
+      sisa_user = limit_gb - total_gib
+      if sisa_user > 0:
+        total_sisa_limit_crew += sisa_user
+
+total_mikrotik_gb = round(total_mikrotik_gb, 2)
+total_sisa_limit_crew = round(total_sisa_limit_crew, 2)
+
+# Hitung Total Penggunaan Active Users
 total_active_gb = 0.0
 jumlah_active = 0
 if raw_active:
@@ -217,46 +231,49 @@ if raw_active:
     total_active_gb += (a_in + a_out) / (1000**3)
 total_active_gb = round(total_active_gb, 2)
 
-# --- KALKULASI DATA LOST DINAMIS ---
-total_pemakaian = config["used_gb"] + total_active_gb
-aktif_alokasi_bosun = config.get("alokasi_bosun", 10.0)
-aktif_cadangan = config.get("cadangan_sisa", 22.0)
+# --- KONSEP PERBANDINGAN SISA STARLINK VS SISA LIMIT CREW ---
+# 1. Sisa Kuota Riil Starlink (Pusat)
+sisa_starlink = round(config["total_gb"] - config["used_gb"], 2)
 
-estimasi_data_lost = round(
-    (total_pemakaian - config["total_gb"]) + (aktif_cadangan + aktif_alokasi_bosun),
-    2,
+# 2. Total Cadangan (Cadangan Sisa + Alokasi Bosun)
+total_cadangan = config.get("cadangan_sisa", 22.0) + config.get(
+    "alokasi_bosun", 10.0
 )
 
-# Status Dinamis Berdasarkan Hasil Plus / Minus
-if estimasi_data_lost < 0:
+# 3. Estimasi Selisih / Data Lost Terhadap Sisa Limit Crew
+# Membandingkan seberapa jauh selisih antara sisa kuota pusat dengan sisa jatah anak buah
+selisih_sisa_data = round(sisa_starlink - total_sisa_limit_crew, 2)
+
+# Status Dinamis
+if selisih_sisa_data < 0:
   status_data_text = (
-      "Sisa data tidak aman / tidak mencukupi untuk kebutuhan data setiap"
-      " crew"
+      "Sisa kuota Starlink lebih kecil dari jatah crew (Waspada Over-limit)"
   )
   delta_color_val = "normal"
 else:
-  status_data_text = "Kelebihan data untuk Backupan (Aman)"
+  status_data_text = "Sisa kuota Starlink selaras / mencukupi (Aman)"
   delta_color_val = "inverse"
 
 # Tampilkan Status Starlink & Perbandingan Global
 st.subheader("📊 Status Starlink & Perbandingan Jaringan")
 
 col1, col2 = st.columns(2)
-col1.metric("Starlink Terpakai", f"{config['used_gb']} GB")
-col2.metric("Total Mikrotik Users", f"{total_mikrotik_gb} GB")
+col1.metric("Sisa Kuota Starlink (Pusat)", f"{sisa_starlink} GB")
+col2.metric("Total Sisa Limit Crew (Lokal)", f"{total_sisa_limit_crew} GB")
 
 col3, col4 = st.columns(2)
-col3.metric(f"Hotspot Active ({jumlah_active} User)", f"{total_active_gb} GB")
+col3.metric("Starlink Terpakai", f"{config['used_gb']} GB")
 col4.metric(
-    "Estimasi Data Lost",
-    f"{estimasi_data_lost} GB",
+    "Selisih Sisa Pusat vs Lokal",
+    f"{selisih_sisa_data} GB",
     delta=status_data_text,
     delta_color=delta_color_val,
 )
 
 # Menampilkan Catatan Alokasi Backup
 st.info(
-    f"📝 **Catatan Alokasi Backup Bulan Ini:** {config.get('catatan_backup')}"
+    f"📝 **Catatan Alokasi Backup Bulan Ini:** {config.get('catatan_backup')} |"
+    f" **Total Cadangan:** {total_cadangan} GB"
 )
 
 st.markdown("---")
@@ -278,7 +295,7 @@ else:
     bytes_in = int(u.get("bytes-in", 0))
     bytes_out = int(u.get("bytes-out", 0))
     total_bytes = bytes_in + bytes_out
-    total_gb = round(total_bytes / (1000**3), 2)  # Konversi ke GB
+    total_gb = round(total_bytes / (1000**3), 2)
 
     limit_bytes_raw = u.get("limit-bytes-total", 0)
     limit_gb = 0.0
