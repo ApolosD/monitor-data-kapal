@@ -272,16 +272,10 @@ col6.metric("LOST DATA", f"{prefix_lost}{lost_data_value} GB")
 
 with col6:
     if lost_data_value < 0:
-        if abs(lost_data_value) <= cadangan_sisa:
-            st.markdown(
-                f'<span style="color: orange; font-weight: bold; font-size: 13px;">⚠️ DEFISIT {lost_data_value} GB: Aman tercover Cadangan ({cadangan_sisa}GB)</span>',
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                f'<span style="color: red; font-weight: bold; font-size: 13px;">⚠️ BAHAYA: Defisit melampaui batas cadangan {cadangan_sisa}GB!</span>',
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            f'<span style="color: red; font-weight: bold; font-size: 13px;">⚠️ BAHAYA: Defisit {abs(lost_data_value)} GB (Kehilangan data murni, kuota pusat tidak mencukupi limit crew!)</span>',
+            unsafe_allow_html=True,
+        )
     else:
         st.markdown(
             f'<span style="color: green; font-weight: bold; font-size: 13px;">✅ AMAN: Surplus {lost_data_value} GB (Kuota Pusat Lebih Tinggi)</span>',
