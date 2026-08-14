@@ -10,7 +10,7 @@ CONFIG_FILE = "starlink_config.json"
 ADDON_FILE = "starlink_addons.json"
 
 
-# Konversi GiB (Biner) ke GB (Desimal) untuk Tampilan
+# Konversi GiB (Biner) ke GB (Desimal) khusus untuk pemakaian bytes aktif
 def gib_to_gb(value_gib):
   return round(value_gib * 1.07374, 2)
 
@@ -94,7 +94,7 @@ def ambil_data_mikrotik():
     list_active = list(api.path("ip", "hotspot", "active"))
     api.close()
     return list_user, list_active
-  except Exception as e:
+  except Exception:
     return None, None
 
 
@@ -201,9 +201,9 @@ if addons_list:
 # Ambil Data dari Mikrotik
 raw_users, raw_active = ambil_data_mikrotik()
 
-# 1. Hitung Total Penggunaan & Sisa Limit Crew (Berdasarkan Cut-off Psikologis 80%)
+# 1. Hitung Total Penggunaan & Sisa Limit Crew Berdasarkan Batas 80%
 total_mikrotik_gib = 0.0
-total_sisa_limit_crew_gib = 0.0
+total_sisa_limit_crew_gb = 0.0
 
 if raw_users:
   for u in raw_users:
@@ -215,15 +215,15 @@ if raw_users:
 
     limit_bytes_raw = u.get("limit-bytes-total", 0)
     if limit_bytes_raw and int(limit_bytes_raw) > 0:
-      limit_gib = int(limit_bytes_raw) / (1024**3)
-      ambang_batas_gib = limit_gib * 0.80  # Sesuai aturan cut-off Mikrotik
-      sisa_user_gib = ambang_batas_gib - total_gib
-      if sisa_user_gib > 0:
-        total_sisa_limit_crew_gib += sisa_user_gib
+      limit_gb_murni = int(limit_bytes_raw) / (1024**3)
+      ambang_batas_gb = limit_gb_murni * 0.80  # Sesuai aturan cut-off Mikrotik
+      sisa_user_gb = ambang_batas_gb - gib_to_gb(total_gib)
+      if sisa_user_gb > 0:
+        total_sisa_limit_crew_gb += sisa_user_gb
 
 # Konversi ke GB Tampilan
 total_mikrotik_gb = gib_to_gb(total_mikrotik_gib)
-total_sisa_limit_crew_gb = gib_to_gb(total_sisa_limit_crew_gib)
+total_sisa_limit_crew_gb = round(total_sisa_limit_crew_gb, 2)
 
 total_active_gib = 0.0
 jumlah_active = 0
@@ -233,7 +233,7 @@ if raw_active:
     a_in = int(act.get("bytes-in", 0))
     a_out = int(act.get("bytes-out", 0))
     total_active_gib += (a_in + a_out) / (1024**3)
-total_active_gib = gib_to_gb(total_active_gib)
+total_active_gb = gib_to_gb(total_active_gib)
 
 # --- PERBANDINGAN SISA STARLINK VS SISA LIMIT CREW ---
 sisa_starlink = round(config["total_gb"] - config["used_gb"], 2)
@@ -255,11 +255,10 @@ col4.metric("Total Mikrotik Users", f"{total_mikrotik_gb} GB")
 
 col5, col6 = st.columns(2)
 col5.metric(
-    f"Hotspot Active ({jumlah_active} User)", f"{total_active_gib} GB"
+    f"Hotspot Active ({jumlah_active} User)", f"{total_active_gb} GB"
 )
 col6.metric("LOST DATA", f"{lost_data_value} GB")
 
-# Penjelasan Status Tepat di Bawah Kolom LOST DATA
 with col6:
   if lost_data_value < 0:
     st.markdown(
@@ -288,8 +287,7 @@ st.subheader("👥 Rekapitulasi Pengguna Hotspot Mikrotik")
 if raw_users is None:
   st.error(
       "[GAGAL] Tidak dapat terhubung ke Mikrotik. Pastikan router online atau"
-      " konfigurasi Secrets (`MIKROTIK_HOST`, `PORT`, `USER`, `PASS`) di"
-      " Streamlit sudah benar."
+      " konfigurasi Secrets sudah benar."
   )
 elif not raw_users:
   st.warning("Data hotspot kosong.")
@@ -299,9 +297,12 @@ else:
     nama = u.get("name", "Unknown")
     bytes_in = int(u.get("bytes-in", 0))
     bytes_out = int(u.get("bytes-out", 0))
+
+    # Total Pakai: Dikonversi ke GB Desimal agar akurat
     total_gib = (bytes_in + bytes_out) / (1024**3)
     total_gb_tampil = gib_to_gb(total_gib)
 
+    # Limit Sistem: Membaca nilai murni dari Mikhmon tanpa pengalian desimal ganda
     limit_bytes_raw = int(u.get("limit-bytes-total", 0))
     limit_str = "Unlimited"
     sisa_data_crew_str = "N/A"
@@ -309,26 +310,25 @@ else:
     status = "Aman (Normal)"
 
     if limit_bytes_raw > 0:
-      limit_gib = limit_bytes_raw / (1024**3)
-      limit_gb_tampil = gib_to_gb(limit_gib)
-      limit_str = f"{limit_gb_tampil:.2f} GB"
+      limit_gb_murni = limit_bytes_raw / (1024**3)
+      limit_str = f"{limit_gb_murni:.2f} GB"
 
-      # Ambang batas psikologis 80%
-      ambang_batas_tampil = limit_gb_tampil * 0.80
+      # Ambang batas psikologis 80% dari limit murni Mikhmon
+      ambang_batas = limit_gb_murni * 0.80
 
-      if total_gb_tampil >= ambang_batas_tampil:
+      if total_gb_tampil >= ambang_batas:
         sisa_data_crew = 0.0
         status = "PAS / HABIS KUOTA"
       else:
-        sisa_data_crew = round(ambang_batas_tampil - total_gb_tampil, 2)
+        sisa_data_crew = round(ambang_batas - total_gb_tampil, 2)
         status = "Aman"
 
       sisa_data_crew_str = f"{sisa_data_crew:.2f} GB"
 
-      persentase = (total_gib / limit_gib) * 100
+      persentase = (total_gb_tampil / limit_gb_murni) * 100
       persentase_str = f"{persentase:.2f} %"
 
-      if total_gb_tampil >= ambang_batas_tampil:
+      if total_gb_tampil >= ambang_batas:
         status = "PAS / HABIS KUOTA"
       elif persentase >= 70.0:
         status = "KRITIS (Hampir Habis)"
