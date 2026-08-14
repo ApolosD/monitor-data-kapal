@@ -226,7 +226,7 @@ if raw_users:
             if sisa_user_gb > 0:
                 total_sisa_limit_crew_gb += sisa_user_gb
 
-total_mikrotik_gb = round(gib_to_gb(total_mikrotik_gib)
+total_mikrotik_gb = round(gib_to_gb(total_mikrotik_gib), 2)
 total_sisa_limit_crew_gb = round(total_sisa_limit_crew_gb, 2)
 
 total_active_gib = 0.0
