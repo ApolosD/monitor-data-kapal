@@ -10,6 +10,11 @@ CONFIG_FILE = "starlink_config.json"
 ADDON_FILE = "starlink_addons.json"
 
 
+# Konversi GiB (Biner) ke GB (Desimal) untuk Tampilan
+def gib_to_gb(value_gib):
+  return round(value_gib * 1.07374, 2)
+
+
 # Fungsi Load & Save Konfigurasi
 def load_config():
   if os.path.exists(CONFIG_FILE):
@@ -28,7 +33,6 @@ def load_config():
 
 
 def save_config(data):
-  # Waktu Lokal WIB (UTC+7)
   wib_time = datetime.datetime.utcnow() + datetime.timedelta(hours=7)
   data["last_updated"] = wib_time.strftime("%d/%m/%Y %H:%M:%S")
   with open(CONFIG_FILE, "w") as f:
@@ -197,48 +201,44 @@ if addons_list:
 # Ambil Data dari Mikrotik
 raw_users, raw_active = ambil_data_mikrotik()
 
-# 1. Hitung Total Penggunaan Seluruh User Mikrotik (GB Desimal) & Akumulasi Sisa Limit Crew
-total_mikrotik_gb = 0.0
-total_sisa_limit_crew = 0.0
+# 1. Hitung Total Penggunaan & Sisa Limit Crew secara Presisi (Basis GiB)
+total_mikrotik_gib = 0.0
+total_sisa_limit_crew_gib = 0.0
 
 if raw_users:
   for u in raw_users:
     b_in = int(u.get("bytes-in", 0))
     b_out = int(u.get("bytes-out", 0))
     total_bytes = b_in + b_out
-    total_gb = total_bytes / (1000**3)
-    total_mikrotik_gb += total_gb
+    total_gib = total_bytes / (1024**3)
+    total_mikrotik_gib += total_gib
 
-    # Hitung sisa limit per user (Limit menggunakan basis 1024 agar sesuai input asli GB/GiB di Mikrotik)
     limit_bytes_raw = u.get("limit-bytes-total", 0)
     if limit_bytes_raw and int(limit_bytes_raw) > 0:
-      limit_gb = int(limit_bytes_raw) / (1024**3)
-      sisa_user = limit_gb - total_gb
-      if sisa_user > 0:
-        total_sisa_limit_crew += sisa_user
+      limit_gib = int(limit_bytes_raw) / (1024**3)
+      sisa_user_gib = limit_gib - total_gib
+      if sisa_user_gib > 0:
+        total_sisa_limit_crew_gib += sisa_user_gib
 
-total_mikrotik_gb = round(total_mikrotik_gb, 2)
-total_sisa_limit_crew = round(total_sisa_limit_crew, 2)
+# Konversi ke GB Tampilan untuk metrik global
+total_mikrotik_gb = gib_to_gb(total_mikrotik_gib)
+total_sisa_limit_crew_gb = gib_to_gb(total_sisa_limit_crew_gib)
 
-# Hitung Total Penggunaan Active Users
-total_active_gb = 0.0
+total_active_gib = 0.0
 jumlah_active = 0
 if raw_active:
   jumlah_active = len(raw_active)
   for act in raw_active:
     a_in = int(act.get("bytes-in", 0))
     a_out = int(act.get("bytes-out", 0))
-    total_active_gb += (a_in + a_out) / (1000**3)
-total_active_gb = round(total_active_gb, 2)
+    total_active_gib += (a_in + a_out) / (1024**3)
+total_active_gb = gib_to_gb(total_active_gib)
 
 # --- PERBANDINGAN SISA STARLINK VS SISA LIMIT CREW DENGAN PENGURANGAN BACKUP SISA ---
 sisa_starlink = round(config["total_gb"] - config["used_gb"], 2)
 cadangan_sisa = config.get("cadangan_sisa", 22.0)
 
-# Selisih murni antara sisa pusat dan sisa lokal
-selisih_murni = round(sisa_starlink - total_sisa_limit_crew, 2)
-
-# Selisih setelah dikurangi/dibantu oleh cadangan sisa (22 GB) -> LOST DATA
+selisih_murni = round(sisa_starlink - total_sisa_limit_crew_gb, 2)
 lost_data_value = round(selisih_murni + cadangan_sisa, 2)
 
 # Tampilkan Status Starlink & Perbandingan Global
@@ -246,7 +246,7 @@ st.subheader("📊 Status Starlink & Perbandingan Jaringan")
 
 col1, col2 = st.columns(2)
 col1.metric("Sisa Kuota Starlink (Pusat)", f"{sisa_starlink} GB")
-col2.metric("Total Sisa Limit Crew (Lokal)", f"{total_sisa_limit_crew} GB")
+col2.metric("Total Sisa Limit Crew (Lokal)", f"{total_sisa_limit_crew_gb} GB")
 
 col3, col4 = st.columns(2)
 col3.metric("Starlink Terpakai", f"{config['used_gb']} GB")
@@ -298,30 +298,28 @@ else:
     nama = u.get("name", "Unknown")
     bytes_in = int(u.get("bytes-in", 0))
     bytes_out = int(u.get("bytes-out", 0))
-    total_bytes = bytes_in + bytes_out
-    total_gb = round(total_bytes / (1000**3), 2)
+    total_gib = (bytes_in + bytes_out) / (1024**3)
+    total_gb_tampil = gib_to_gb(total_gib)
 
-    limit_bytes_raw = u.get("limit-bytes-total", 0)
-    limit_gb = 0.0
+    limit_bytes_raw = int(u.get("limit-bytes-total", 0))
     limit_str = "Unlimited"
     sisa_data_crew_str = "N/A"
     persentase_str = "N/A"
     status = "Aman (Normal)"
 
-    if limit_bytes_raw and int(limit_bytes_raw) > 0:
-      # Limit dikembalikan ke pembagi 1024 agar angka bulat sesuai settingan asli (misal 52 GB)
-      limit_gb = round(int(limit_bytes_raw) / (1024**3), 2)
-      limit_str = f"{limit_gb:.2f} GB"
+    if limit_bytes_raw > 0:
+      limit_gib = limit_bytes_raw / (1024**3)
+      limit_gb_tampil = gib_to_gb(limit_gib)
+      limit_str = f"{limit_gb_tampil:.2f} GB"
 
-      # Hitung Sisa Data Crew (Limit Sistem - Total Pakai)
-      sisa_data_crew = round(limit_gb - total_gb, 2)
+      sisa_data_crew = round(limit_gb_tampil - total_gb_tampil, 2)
       sisa_data_crew_str = f"{sisa_data_crew:.2f} GB"
 
-      persentase = (total_gb / limit_gb) * 100
+      persentase = (total_gib / limit_gib) * 100
       persentase_str = f"{persentase:.2f} %"
 
-      if total_gb > limit_gb:
-        over_amount = round(total_gb - limit_gb, 2)
+      if total_gib > limit_gib:
+        over_amount = gib_to_gb(total_gib - limit_gib)
         status = f"OVER LIMIT! (+{over_amount:.2f} GB)"
       elif persentase >= 100.0:
         status = "PAS / HABIS KUOTA"
@@ -333,17 +331,17 @@ else:
         status = "Aman"
     else:
       status = (
-          "Aktif (Unlimited)" if total_gb > 0 else "Belum Digunakan"
+          "Aktif (Unlimited)" if total_gb_tampil > 0 else "Belum Digunakan"
       )
 
     parsed_data.append({
         "User": nama,
-        "Total Pakai (GB)": f"{total_gb:.2f} GB",
+        "Total Pakai (GB)": f"{total_gb_tampil:.2f} GB",
         "Limit Sistem": limit_str,
         "Sisa Data Crew": sisa_data_crew_str,
         "Persentase": persentase_str,
         "Status": status,
-        "_raw_total": total_gb,
+        "_raw_total": total_gib,
     })
 
   df = pd.DataFrame(parsed_data)
