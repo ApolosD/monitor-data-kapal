@@ -468,7 +468,7 @@ if not st.session_state.admin_logged_in:
 
     if login_btn:
       # Ubah username & password admin sesuai keinginan Anda di sini
-      if admin_user == "admin" and admin_pass == "rahasia123":
+      if admin_user == "admin" and admin_pass == "admin":
         st.session_state.admin_logged_in = True
         st.success("Login Berhasil!")
         st.rerun()
