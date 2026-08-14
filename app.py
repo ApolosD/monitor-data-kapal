@@ -209,10 +209,10 @@ if raw_users:
     total_gb = total_bytes / (1000**3)
     total_mikrotik_gb += total_gb
 
-    # Hitung sisa limit per user jika memiliki limit sistem
+    # Hitung sisa limit per user (Limit menggunakan basis 1024 agar sesuai input asli GB/GiB di Mikrotik)
     limit_bytes_raw = u.get("limit-bytes-total", 0)
     if limit_bytes_raw and int(limit_bytes_raw) > 0:
-      limit_gb = int(limit_bytes_raw) / (1000**3)
+      limit_gb = int(limit_bytes_raw) / (1024**3)
       sisa_user = limit_gb - total_gb
       if sisa_user > 0:
         total_sisa_limit_crew += sisa_user
@@ -238,7 +238,7 @@ cadangan_sisa = config.get("cadangan_sisa", 22.0)
 # Selisih murni antara sisa pusat dan sisa lokal
 selisih_murni = round(sisa_starlink - total_sisa_limit_crew, 2)
 
-# Selisih setelah dikurangi/dibantu oleh cadangan sisa (22 GB) -> Disebut LOST DATA
+# Selisih setelah dikurangi/dibantu oleh cadangan sisa (22 GB) -> LOST DATA
 lost_data_value = round(selisih_murni + cadangan_sisa, 2)
 
 # Tampilkan Status Starlink & Perbandingan Global
@@ -258,7 +258,7 @@ col5.metric(
 )
 col6.metric("LOST DATA", f"{lost_data_value} GB")
 
-# Penjelasan Status diletakkan TEPAT di bawah kolom LOST DATA (col6)
+# Penjelasan Status Tepat di Bawah Kolom LOST DATA (col6)
 with col6:
   if lost_data_value < 0:
     st.markdown(
@@ -309,7 +309,8 @@ else:
     status = "Aman (Normal)"
 
     if limit_bytes_raw and int(limit_bytes_raw) > 0:
-      limit_gb = round(int(limit_bytes_raw) / (1000**3), 2)
+      # Limit dikembalikan ke pembagi 1024 agar angka bulat sesuai settingan asli (misal 52 GB)
+      limit_gb = round(int(limit_bytes_raw) / (1024**3), 2)
       limit_str = f"{limit_gb:.2f} GB"
 
       # Hitung Sisa Data Crew (Limit Sistem - Total Pakai)
