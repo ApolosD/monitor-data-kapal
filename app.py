@@ -258,20 +258,21 @@ col5.metric(
 )
 col6.metric("LOST DATA", f"{lost_data_value} GB")
 
-# Penjelasan Status di Bawah Lost Data
-if lost_data_value < 0:
-  st.markdown(
-      '<span style="color: red; font-weight: bold;">⚠️ BAHAYA: Over-limit /'
-      " Jatah Crew Kurang (Backup 22GB belum cukup"
-      " menutupi)</span>",
-      unsafe_allow_html=True,
-  )
-else:
-  st.markdown(
-      '<span style="color: green; font-weight: bold;">✅ AMAN: Kuota &'
-      " Backup Mencukupi</span>",
-      unsafe_allow_html=True,
-  )
+# Penjelasan Status diletakkan TEPAT di bawah kolom LOST DATA (col6)
+with col6:
+  if lost_data_value < 0:
+    st.markdown(
+        '<span style="color: red; font-weight: bold; font-size: 13px;">⚠️'
+        " BAHAYA: Over-limit / Jatah Crew Kurang (Backup 22GB belum cukup"
+        " menutupi)</span>",
+        unsafe_allow_html=True,
+    )
+  else:
+    st.markdown(
+        '<span style="color: green; font-weight: bold; font-size: 13px;">✅'
+        " AMAN: Kuota & Backup Mencukupi</span>",
+        unsafe_allow_html=True,
+    )
 
 # Menampilkan Catatan Alokasi Backup
 st.info(
@@ -365,7 +366,7 @@ else:
       warnai_status, subset=["Status"]
   )
 
-  st.dataframe(df_styled, use_container_width=True)
+  st.dataframe(df_styled, use_container_width=True, height=550)
   st.info(
       "💡 Data di atas diambil langsung secara real-time dari router Mikrotik"
       " kapal."
