@@ -82,7 +82,7 @@ def ambil_data_mikrotik():
     list_active = list(api.path("ip", "hotspot", "active"))
     api.close()
     return list_user, list_active
-  except Exception as e:
+  except Exception:
     return None, None
 
 
@@ -111,7 +111,6 @@ with st.sidebar.form("config_form"):
   tanggal_reset = st.text_input(
       "Tanggal Reset", value=str(config["tanggal_reset"])
   )
-
   submit_config = st.form_submit_button(label="💾 Simpan Konfigurasi")
 
   if submit_config:
@@ -133,18 +132,13 @@ with st.sidebar.form("addon_form"):
   submit_addon = st.form_submit_button(label="➕ Tambah Add-on")
 
   if submit_addon:
-    if not addon_user.strip():
-      st.sidebar.error("Nama user tidak boleh kosong!")
-    else:
-      new_addon = {
+    if addon_user.strip():
+      addons_list.append({
           "user": addon_user,
           "tanggal": addon_date.strftime("%d/%m/%Y"),
           "jumlah": addon_amount,
-      }
-      addons_list.append(new_addon)
+      })
       save_addons(addons_list)
-
-      # Otomatis tambahkan ke total kuota
       config["total_gb"] += addon_amount
       save_config(config)
       st.sidebar.success(
@@ -182,11 +176,14 @@ if raw_active:
     total_active_gib += (a_in + a_out) / (1024**3)
 total_active_gib = round(total_active_gib, 2)
 
-# Logika Baru Kalkulasi Estimasi Data Lost:
-# Sisa data pool dikurangi Alokasi khusus Bosun (10 GB) dan cadangan sistem
-alokasi_bosun = 10.0
-sisa_kuota = round(config["total_gb"] - config["used_gb"], 2)
-estimasi_data_lost = round(sisa_kuota - total_mikrotik_gib - alokasi_bosun, 2)
+# --- REVISI KALKULASI DATA LOST ---
+# Rumus: Estimasi Data Lost = (Total Pemakaian - Total Kuota) + 22GB (Cadangan)
+# Total Pemakaian = Starlink Terpakai + Hotspot Active
+CADANGAN_DATA = 22.0
+total_pemakaian = config["used_gb"] + total_active_gib
+estimasi_data_lost = round(
+    (total_pemakaian - config["total_gb"]) + CADANGAN_DATA, 2
+)
 
 # Tampilkan Status Starlink & Perbandingan Global
 st.subheader("📊 Status Starlink & Perbandingan Jaringan")
@@ -201,8 +198,8 @@ col3.metric(
 )
 col4.metric(
     "Estimasi Data Lost",
-    f"{estimasi_data_lost} GiB",
-    delta="Backup Optimal" if estimasi_data_lost >= -20 else "Perhatian",
+    f"{estimasi_data_lost} GB",
+    delta="Cadangan Aman" if estimasi_data_lost < 0 else "KEHILANGAN DATA!",
     delta_color="inverse",
 )
 
@@ -285,7 +282,7 @@ else:
       warnai_status, subset=["Status"]
   )
 
-  st.dataframe(df_styled, width="stretch")
+  st.dataframe(df_styled, use_container_width=True)
   st.info(
       "💡 Data di atas diambil langsung secara real-time dari router Mikrotik"
       " kapal."
