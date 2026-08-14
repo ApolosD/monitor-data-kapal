@@ -197,32 +197,31 @@ if addons_list:
 # Ambil Data dari Mikrotik
 raw_users, raw_active = ambil_data_mikrotik()
 
-# Hitung Total Penggunaan Seluruh User Mikrotik
-total_mikrotik_gib = 0.0
+# Hitung Total Penggunaan Seluruh User Mikrotik (Dikonversi ke GB Desimal: 10^9 bytes)
+total_mikrotik_gb = 0.0
 if raw_users:
   for u in raw_users:
     b_in = int(u.get("bytes-in", 0))
     b_out = int(u.get("bytes-out", 0))
-    total_mikrotik_gib += (b_in + b_out) / (1024**3)
-total_mikrotik_gib = round(total_mikrotik_gib, 2)
+    total_mikrotik_gb += (b_in + b_out) / (1000**3)
+total_mikrotik_gb = round(total_mikrotik_gb, 2)
 
-# Hitung Total Penggunaan Active Users
-total_active_gib = 0.0
+# Hitung Total Penggunaan Active Users (Dikonversi ke GB Desimal)
+total_active_gb = 0.0
 jumlah_active = 0
 if raw_active:
   jumlah_active = len(raw_active)
   for act in raw_active:
     a_in = int(act.get("bytes-in", 0))
     a_out = int(act.get("bytes-out", 0))
-    total_active_gib += (a_in + a_out) / (1024**3)
-total_active_gib = round(total_active_gib, 2)
+    total_active_gb += (a_in + a_out) / (1000**3)
+total_active_gb = round(total_active_gb, 2)
 
 # --- KALKULASI DATA LOST DINAMIS ---
-total_pemakaian = config["used_gb"] + total_active_gib
+total_pemakaian = config["used_gb"] + total_active_gb
 aktif_alokasi_bosun = config.get("alokasi_bosun", 10.0)
 aktif_cadangan = config.get("cadangan_sisa", 22.0)
 
-# Rumus kalkulasi data lost dengan memperhitungkan cadangan & alokasi
 estimasi_data_lost = round(
     (total_pemakaian - config["total_gb"]) + (aktif_cadangan + aktif_alokasi_bosun),
     2,
@@ -234,22 +233,20 @@ if estimasi_data_lost < 0:
       "Sisa data tidak aman / tidak mencukupi untuk kebutuhan data setiap"
       " crew"
   )
-  delta_color_val = "normal"  # Menandakan peringatan (merah/oranye)
+  delta_color_val = "normal"
 else:
   status_data_text = "Kelebihan data untuk Backupan (Aman)"
-  delta_color_val = "inverse"  # Menandakan aman (hijau)
+  delta_color_val = "inverse"
 
 # Tampilkan Status Starlink & Perbandingan Global
 st.subheader("📊 Status Starlink & Perbandingan Jaringan")
 
 col1, col2 = st.columns(2)
 col1.metric("Starlink Terpakai", f"{config['used_gb']} GB")
-col2.metric("Total Mikrotik Users", f"{total_mikrotik_gib} GiB")
+col2.metric("Total Mikrotik Users", f"{total_mikrotik_gb} GB")
 
 col3, col4 = st.columns(2)
-col3.metric(
-    f"Hotspot Active ({jumlah_active} User)", f"{total_active_gib} GiB"
-)
+col3.metric(f"Hotspot Active ({jumlah_active} User)", f"{total_active_gb} GB")
 col4.metric(
     "Estimasi Data Lost",
     f"{estimasi_data_lost} GB",
@@ -257,7 +254,7 @@ col4.metric(
     delta_color=delta_color_val,
 )
 
-# Menampilkan Catatan Alokasi Backup agar jelas peruntukannya
+# Menampilkan Catatan Alokasi Backup
 st.info(
     f"📝 **Catatan Alokasi Backup Bulan Ini:** {config.get('catatan_backup')}"
 )
@@ -281,23 +278,23 @@ else:
     bytes_in = int(u.get("bytes-in", 0))
     bytes_out = int(u.get("bytes-out", 0))
     total_bytes = bytes_in + bytes_out
-    total_gib = round(total_bytes / (1024**3), 2)
+    total_gb = round(total_bytes / (1000**3), 2)  # Konversi ke GB
 
     limit_bytes_raw = u.get("limit-bytes-total", 0)
-    limit_gib = 0.0
+    limit_gb = 0.0
     limit_str = "Unlimited"
     persentase_str = "N/A"
     status = "Aman (Normal)"
 
     if limit_bytes_raw and int(limit_bytes_raw) > 0:
-      limit_gib = round(int(limit_bytes_raw) / (1024**3), 2)
-      limit_str = f"{limit_gib:.2f} GiB"
-      persentase = (total_gib / limit_gib) * 100
+      limit_gb = round(int(limit_bytes_raw) / (1000**3), 2)
+      limit_str = f"{limit_gb:.2f} GB"
+      persentase = (total_gb / limit_gb) * 100
       persentase_str = f"{persentase:.2f} %"
 
-      if total_gib > limit_gib:
-        over_amount = round(total_gib - limit_gib, 2)
-        status = f"OVER LIMIT! (+{over_amount:.2f} GiB)"
+      if total_gb > limit_gb:
+        over_amount = round(total_gb - limit_gb, 2)
+        status = f"OVER LIMIT! (+{over_amount:.2f} GB)"
       elif persentase >= 100.0:
         status = "PAS / HABIS KUOTA"
       elif persentase >= 90.0:
@@ -308,16 +305,16 @@ else:
         status = "Aman"
     else:
       status = (
-          "Aktif (Unlimited)" if total_gib > 0 else "Belum Digunakan"
+          "Aktif (Unlimited)" if total_gb > 0 else "Belum Digunakan"
       )
 
     parsed_data.append({
         "User": nama,
-        "Total Pakai (GiB)": f"{total_gib:.2f} GiB",
+        "Total Pakai (GB)": f"{total_gb:.2f} GB",
         "Limit Sistem": limit_str,
         "Persentase": persentase_str,
         "Status": status,
-        "_raw_total": total_gib,
+        "_raw_total": total_gb,
     })
 
   df = pd.DataFrame(parsed_data)
