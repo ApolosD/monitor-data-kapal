@@ -221,8 +221,12 @@ if raw_users:
         limit_bytes_raw = u.get("limit-bytes-total", 0)
         if limit_bytes_raw and int(limit_bytes_raw) > 0:
             limit_gb_murni = round(int(limit_bytes_raw) / (1024**3))
-            ambang_batas_gb = limit_gb_murni * 0.80
-            sisa_user_gb = ambang_batas_gb - gib_to_gb(total_gib)
+            
+            # Saling sinkronisasi scaling: Pemakaian aktual dibagi 0.8 agar saat di 80% Mikrotik, tertulis 100% habis di layar
+            pemakaian_aktual = gib_to_gb(total_gib)
+            total_gb_tampil = round(pemakaian_aktual / 0.80, 2)
+            
+            sisa_user_gb = round(limit_gb_murni - total_gb_tampil, 2)
             if sisa_user_gb > 0:
                 total_sisa_limit_crew_gb += sisa_user_gb
 
@@ -263,7 +267,6 @@ col5.metric(
     f"Hotspot Active ({jumlah_active} User)", f"{total_active_gb} GB"
 )
 
-# Menampilkan Lost Data dengan format Plus (+) atau Minus (-) secara murni
 prefix_lost = "+" if lost_data_value > 0 else ""
 col6.metric("LOST DATA", f"{prefix_lost}{lost_data_value} GB")
 
@@ -312,7 +315,10 @@ else:
         bytes_out = int(u.get("bytes-out", 0))
 
         total_gib = (bytes_in + bytes_out) / (1024**3)
-        total_gb_tampil = gib_to_gb(total_gib)
+        pemakaian_aktual = gib_to_gb(total_gib)
+        
+        # SCALING: Pemakaian yang dilihat crew diskala agar pas 100% saat Mikrotik memblokir di 80%
+        total_gb_tampil = round(pemakaian_aktual / 0.80, 2)
 
         limit_bytes_raw = int(u.get("limit-bytes-total", 0))
         limit_str = "Unlimited"
@@ -321,6 +327,7 @@ else:
         status = "Aman (Normal)"
 
         if limit_bytes_raw > 0:
+            # Limit sistem yang tampil ke crew TETAP 100% penuh (misal: 50 GB)
             limit_gb_murni = round(limit_bytes_raw / (1024**3))
             limit_str = f"{limit_gb_murni:.2f} GB"
 
