@@ -196,7 +196,7 @@ if addons_list:
 # Ambil Data dari Mikrotik
 raw_users, raw_active = ambil_data_mikrotik()
 
-# 1. Hitung Total Penggunaan & Sisa Limit Crew (Standar Desimal GB 10^9)
+# 1. Hitung Total Penggunaan & Sisa Limit Crew
 total_mikrotik_gb = 0.0
 total_sisa_limit_crew_gb = 0.0
 
@@ -204,12 +204,16 @@ if raw_users:
   for u in raw_users:
     b_in = int(u.get("bytes-in", 0))
     b_out = int(u.get("bytes-out", 0))
-    total_gb_user = (b_in + b_out) / (10**9)
+    total_gb_user = (b_in + b_out) / (1024**3) * 1.07374
     total_mikrotik_gb += total_gb_user
 
     limit_bytes_raw = u.get("limit-bytes-total", 0)
     if limit_bytes_raw and int(limit_bytes_raw) > 0:
-      limit_gb_murni = int(limit_bytes_raw) / (10**9)
+      raw_limit_val = int(limit_bytes_raw) / (1024**3) * 1.07374
+      limit_gb_murni = round(raw_limit_val / 5) * 5 
+      if limit_gb_murni == 0:
+        limit_gb_murni = round(raw_limit_val)
+
       sisa_user_gb = limit_gb_murni - total_gb_user
       if sisa_user_gb > 0:
         total_sisa_limit_crew_gb += sisa_user_gb
@@ -224,7 +228,7 @@ if raw_active:
   for act in raw_active:
     a_in = int(act.get("bytes-in", 0))
     a_out = int(act.get("bytes-out", 0))
-    total_active_gb += (a_in + a_out) / (10**9)
+    total_active_gb += (a_in + a_out) / (1024**3) * 1.07374
 total_active_gb = round(total_active_gb, 2)
 
 # --- PERBANDINGAN SISA STARLINK VS SISA LIMIT CREW ---
@@ -290,7 +294,7 @@ else:
     bytes_in = int(u.get("bytes-in", 0))
     bytes_out = int(u.get("bytes-out", 0))
 
-    total_gb_tampil = round((bytes_in + bytes_out) / (10**9), 2)
+    total_gb_tampil = round((bytes_in + bytes_out) / (1024**3) * 1.07374, 2)
 
     limit_bytes_raw = int(u.get("limit-bytes-total", 0))
     limit_str = "Unlimited"
@@ -299,7 +303,11 @@ else:
     status = "Aman (Normal)"
 
     if limit_bytes_raw > 0:
-      limit_gb_murni = round(limit_bytes_raw / (10**9), 2)
+      raw_limit_val = int(limit_bytes_raw) / (1024**3) * 1.07374
+      limit_gb_murni = round(raw_limit_val / 5) * 5 
+      if limit_gb_murni == 0:
+        limit_gb_murni = round(raw_limit_val)
+
       limit_str = f"{limit_gb_murni:.2f} GB"
 
       persentase = (
@@ -309,7 +317,6 @@ else:
       )
       persentase_str = f"{persentase:.2f} %"
 
-      # Perhitungan sisa data natural untuk crew
       sisa_data_calc = round(limit_gb_murni - total_gb_tampil, 2)
 
       if persentase >= 100.0:
@@ -344,7 +351,7 @@ else:
 
   def warnai_status(val):
     if "PAS / HABIS KUOTA" in val:
-      return "background-color: #ffe6cc; color: #cc6600; font-weight: bold;"
+      return "background-color: #ff4d4d; color: white; font-weight: bold;"
     elif "KRITIS" in val:
       return "background-color: #fff2cc; color: #997a00; font-weight: bold;"
     elif "Aman" in val:
