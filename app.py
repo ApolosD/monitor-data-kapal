@@ -216,7 +216,7 @@ if raw_users:
     limit_bytes_raw = u.get("limit-bytes-total", 0)
     if limit_bytes_raw and int(limit_bytes_raw) > 0:
       limit_gb_murni = int(limit_bytes_raw) / (1024**3)
-      ambang_batas_gb = limit_gb_murni * 0.80  # Sesuai aturan cut-off Mikrotik
+      ambang_batas_gb = limit_gb_murni * 0.80
       sisa_user_gb = ambang_batas_gb - gib_to_gb(total_gib)
       if sisa_user_gb > 0:
         total_sisa_limit_crew_gb += sisa_user_gb
@@ -233,7 +233,7 @@ if raw_active:
     a_in = int(act.get("bytes-in", 0))
     a_out = int(act.get("bytes-out", 0))
     total_active_gib += (a_in + a_out) / (1024**3)
-total_active_gb = gib_to_gb(total_active_gib)
+total_active_gib = gib_to_gb(total_active_gib)
 
 # --- PERBANDINGAN SISA STARLINK VS SISA LIMIT CREW ---
 sisa_starlink = round(config["total_gb"] - config["used_gb"], 2)
@@ -255,7 +255,7 @@ col4.metric("Total Mikrotik Users", f"{total_mikrotik_gb} GB")
 
 col5, col6 = st.columns(2)
 col5.metric(
-    f"Hotspot Active ({jumlah_active} User)", f"{total_active_gb} GB"
+    f"Hotspot Active ({jumlah_active} User)", f"{total_active_gib} GB"
 )
 col6.metric("LOST DATA", f"{lost_data_value} GB")
 
@@ -298,11 +298,9 @@ else:
     bytes_in = int(u.get("bytes-in", 0))
     bytes_out = int(u.get("bytes-out", 0))
 
-    # Total Pakai: Dikonversi ke GB Desimal agar akurat
     total_gib = (bytes_in + bytes_out) / (1024**3)
     total_gb_tampil = gib_to_gb(total_gib)
 
-    # Limit Sistem: Membaca nilai murni dari Mikhmon tanpa pengalian desimal ganda
     limit_bytes_raw = int(u.get("limit-bytes-total", 0))
     limit_str = "Unlimited"
     sisa_data_crew_str = "N/A"
@@ -313,10 +311,15 @@ else:
       limit_gb_murni = limit_bytes_raw / (1024**3)
       limit_str = f"{limit_gb_murni:.2f} GB"
 
-      # Ambang batas psikologis 80% dari limit murni Mikhmon
       ambang_batas = limit_gb_murni * 0.80
+      persentase = (total_gib / limit_gb_murni) * 100
+      persentase_str = f"{persentase:.2f} %"
 
-      if total_gb_tampil >= ambang_batas:
+      if persentase >= 100.0:
+        over_amount = round(total_gb_tampil - limit_gb_murni, 2)
+        sisa_data_crew = 0.0
+        status = f"OVER LIMIT! (+{over_amount:.2f} GB)"
+      elif total_gb_tampil >= ambang_batas:
         sisa_data_crew = 0.0
         status = "PAS / HABIS KUOTA"
       else:
@@ -324,16 +327,6 @@ else:
         status = "Aman"
 
       sisa_data_crew_str = f"{sisa_data_crew:.2f} GB"
-
-      persentase = (total_gb_tampil / limit_gb_murni) * 100
-      persentase_str = f"{persentase:.2f} %"
-
-      if total_gb_tampil >= ambang_batas:
-        status = "PAS / HABIS KUOTA"
-      elif persentase >= 70.0:
-        status = "KRITIS (Hampir Habis)"
-      else:
-        status = "Aman"
     else:
       status = (
           "Aktif (Unlimited)" if total_gb_tampil > 0 else "Belum Digunakan"
@@ -354,7 +347,7 @@ else:
 
   def warnai_status(val):
     if "OVER LIMIT!" in val:
-      return "background-color: #ffcccc; color: #990000; font-weight: bold;"
+      return "background-color: #ff4d4d; color: white; font-weight: bold;"
     elif val == "PAS / HABIS KUOTA":
       return "background-color: #ffe6cc; color: #cc6600;"
     elif "KRITIS" in val:
