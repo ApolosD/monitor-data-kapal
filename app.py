@@ -231,20 +231,21 @@ if raw_active:
     total_active_gb += (a_in + a_out) / (1000**3)
 total_active_gb = round(total_active_gb, 2)
 
-# --- PERBANDINGAN SISA STARLINK VS SISA LIMIT CREW ---
+# --- PERBANDINGAN SISA STARLINK VS SISA LIMIT CREW DENGAN PENGURANGAN BACKUP SISA ---
 sisa_starlink = round(config["total_gb"] - config["used_gb"], 2)
-total_cadangan = config.get("cadangan_sisa", 22.0) + config.get(
-    "alokasi_bosun", 10.0
-)
-selisih_sisa_data = round(sisa_starlink - total_sisa_limit_crew, 2)
+cadangan_sisa = config.get("cadangan_sisa", 22.0)
 
-# Status Dinamis dengan Teks Ringkas & Warna Merah (Normal) jika Over-limit/Tidak Aman
-if selisih_sisa_data < 0:
-  status_data_text = "⚠️ WARNING: Over-limit / Jatah Crew Kurang!"
-  delta_color_val = "normal"  # Menampilkan warna merah (urgent)
+# Selisih murni antara sisa pusat dan sisa lokal
+selisih_murni = round(sisa_starlink - total_sisa_limit_crew, 2)
+
+# Selisih setelah dikurangi/dibantu oleh cadangan sisa (22 GB)
+selisih_setelah_backup = round(selisih_murni + cadangan_sisa, 2)
+
+# Status Dinamis & Pewarnaan HTML Merah Tegas
+if selisih_setelah_backup < 0:
+  status_html = '<span style="color: red; font-weight: bold;">⚠️ BAHAYA: Over-limit / Jatah Crew Kurang (Backup 22GB belum cukup menutupi)</span>'
 else:
-  status_data_text = "✅ AMAN: Kuota Mencukupi"
-  delta_color_val = "inverse"  # Menampilkan warna hijau (aman)
+  status_html = '<span style="color: green; font-weight: bold;">✅ AMAN: Kuota & Backup Mencukupi</span>'
 
 # Tampilkan Status Starlink & Perbandingan Global
 st.subheader("📊 Status Starlink & Perbandingan Jaringan")
@@ -262,16 +263,17 @@ col5.metric(
     f"Hotspot Active ({jumlah_active} User)", f"{total_active_gb} GB"
 )
 col6.metric(
-    "Selisih Sisa Pusat vs Lokal",
-    f"{selisih_sisa_data} GB",
-    delta=status_data_text,
-    delta_color=delta_color_val,
+    "Selisih Sisa (Sudah Dikurangi Backup 22GB)",
+    f"{selisih_setelah_backup} GB",
 )
+
+# Render status teks dengan warna merah/hijau kustom
+st.markdown(status_html, unsafe_allow_html=True)
 
 # Menampilkan Catatan Alokasi Backup
 st.info(
     f"📝 **Catatan Alokasi Backup Bulan Ini:** {config.get('catatan_backup')} |"
-    f" **Total Cadangan:** {total_cadangan} GB"
+    f" **Backup Sisa yang Digunakan:** {cadangan_sisa} GB"
 )
 
 st.markdown("---")
