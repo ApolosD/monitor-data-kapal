@@ -238,14 +238,8 @@ cadangan_sisa = config.get("cadangan_sisa", 22.0)
 # Selisih murni antara sisa pusat dan sisa lokal
 selisih_murni = round(sisa_starlink - total_sisa_limit_crew, 2)
 
-# Selisih setelah dikurangi/dibantu oleh cadangan sisa (22 GB)
-selisih_setelah_backup = round(selisih_murni + cadangan_sisa, 2)
-
-# Status Dinamis & Pewarnaan HTML Merah Tegas
-if selisih_setelah_backup < 0:
-  status_html = '<span style="color: red; font-weight: bold;">⚠️ BAHAYA: Over-limit / Jatah Crew Kurang (Backup 22GB belum cukup menutupi)</span>'
-else:
-  status_html = '<span style="color: green; font-weight: bold;">✅ AMAN: Kuota & Backup Mencukupi</span>'
+# Selisih setelah dikurangi/dibantu oleh cadangan sisa (22 GB) -> Disebut LOST DATA
+lost_data_value = round(selisih_murni + cadangan_sisa, 2)
 
 # Tampilkan Status Starlink & Perbandingan Global
 st.subheader("📊 Status Starlink & Perbandingan Jaringan")
@@ -262,13 +256,22 @@ col5, col6 = st.columns(2)
 col5.metric(
     f"Hotspot Active ({jumlah_active} User)", f"{total_active_gb} GB"
 )
-col6.metric(
-    "Selisih Sisa (Sudah Dikurangi Backup 22GB)",
-    f"{selisih_setelah_backup} GB",
-)
+col6.metric("LOST DATA", f"{lost_data_value} GB")
 
-# Render status teks dengan warna merah/hijau kustom
-st.markdown(status_html, unsafe_allow_html=True)
+# Penjelasan Status di Bawah Lost Data
+if lost_data_value < 0:
+  st.markdown(
+      '<span style="color: red; font-weight: bold;">⚠️ BAHAYA: Over-limit /'
+      " Jatah Crew Kurang (Backup 22GB belum cukup"
+      " menutupi)</span>",
+      unsafe_allow_html=True,
+  )
+else:
+  st.markdown(
+      '<span style="color: green; font-weight: bold;">✅ AMAN: Kuota &'
+      " Backup Mencukupi</span>",
+      unsafe_allow_html=True,
+  )
 
 # Menampilkan Catatan Alokasi Backup
 st.info(
@@ -300,12 +303,18 @@ else:
     limit_bytes_raw = u.get("limit-bytes-total", 0)
     limit_gb = 0.0
     limit_str = "Unlimited"
+    sisa_data_crew_str = "N/A"
     persentase_str = "N/A"
     status = "Aman (Normal)"
 
     if limit_bytes_raw and int(limit_bytes_raw) > 0:
       limit_gb = round(int(limit_bytes_raw) / (1000**3), 2)
       limit_str = f"{limit_gb:.2f} GB"
+
+      # Hitung Sisa Data Crew (Limit Sistem - Total Pakai)
+      sisa_data_crew = round(limit_gb - total_gb, 2)
+      sisa_data_crew_str = f"{sisa_data_crew:.2f} GB"
+
       persentase = (total_gb / limit_gb) * 100
       persentase_str = f"{persentase:.2f} %"
 
@@ -329,6 +338,7 @@ else:
         "User": nama,
         "Total Pakai (GB)": f"{total_gb:.2f} GB",
         "Limit Sistem": limit_str,
+        "Sisa Data Crew": sisa_data_crew_str,
         "Persentase": persentase_str,
         "Status": status,
         "_raw_total": total_gb,
