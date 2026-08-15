@@ -16,16 +16,42 @@ addons_list = load_addons()
 
 st.set_page_config(page_title="Monitoring Jaringan Kapal", layout="wide")
 
-# --- CUSTOM CSS: TEMA BACKGROUND GALAXY / LAUT DALAM & KARTU MODERN ---
+# --- CUSTOM CSS: TEMA GALAXY & PERBAIKAN UI/UX ---
 st.markdown("""
     <style>
-    /* Mengubah background utama aplikasi menjadi tema ruang angkasa/laut dalam */
+    /* 1. Background Utama Aplikasi (Galaxy / Deep Ocean) */
     .stApp {
         background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%);
         color: #f8fafc;
     }
     
-    /* Styling Kartu Metrik */
+    /* 2. Styling Sidebar Menjadi Gelap & Kontras */
+    [data-testid="stSidebar"] {
+        background-color: #1e293b !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3, 
+    [data-testid="stSidebar"] label, 
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] p {
+        color: #f8fafc !important;
+    }
+
+    /* 3. Perbaikan Kotak Info / Alert (Catatan Alokasi Backup) */
+    .stAlert {
+        background-color: #1e293b !important;
+        color: #38bdf8 !important; /* Warna teks biru terang agar mudah dibaca */
+        border: 1px solid #334155 !important;
+        border-radius: 10px;
+    }
+    .stAlert p {
+        color: #38bdf8 !important;
+        font-weight: 500;
+    }
+
+    /* 4. Styling Kartu Metrik Modern */
     .metric-card {
         background-color: rgba(30, 41, 59, 0.7);
         backdrop-filter: blur(10px);
@@ -49,8 +75,30 @@ st.markdown("""
         margin: 0;
         font-weight: 700;
     }
-    
-    /* Mempercantik teks judul agar kontras di mode gelap */
+
+    /* 5. Perbaikan Tombol & Tombol Download CSV agar Selalu Terlihat Jelas */
+    div.stButton > button, div.stDownloadButton > button {
+        background-color: #3b82f6 !important;
+        color: #ffffff !important;
+        font-weight: bold !important;
+        border-radius: 8px !important;
+        border: none !important;
+        width: 100%;
+    }
+    div.stButton > button:hover, div.stDownloadButton > button:hover {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+    }
+
+    /* 6. Penyesuaian Tabel Dataframe agar Menyatu dengan Tema Gelap */
+    [data-testid="stDataFrame"] {
+        background-color: #1e293b !important;
+        border-radius: 10px;
+        padding: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Judul Utama */
     h1, h2, h3 {
         color: #f8fafc !important;
     }
@@ -73,7 +121,7 @@ except:
 raw_users, raw_active = ambil_data_mikrotik(MIKROTIK_HOST, MIKROTIK_PORT, MIKROTIK_USER, MIKROTIK_PASS)
 
 # ==========================================
-# SIDEBAR: KONTROL DI KIRI (TETAP RAPI)
+# SIDEBAR: KONTROL DI KIRI
 # ==========================================
 with st.sidebar:
     st.header("⚙️ Panel Kontrol")
