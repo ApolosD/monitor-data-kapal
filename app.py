@@ -3,8 +3,7 @@ import pandas as pd
 import streamlit as st
 
 from config_manager import (
-    gib_to_gb, load_addons, load_archives, load_config, 
-    save_addons, save_archive, save_config, load_locales,
+    gib_to_gb, load_config, save_config, load_locales,
     load_audit_logs, save_audit_log
 )
 from mikrotik_connector import (
@@ -13,7 +12,6 @@ from mikrotik_connector import (
 from utils import render_custom_table
 
 config = load_config()
-addons_list = load_addons()
 locales = load_locales()
 
 st.set_page_config(page_title="Vessel Network Monitoring & Mikhmon", layout="wide")
@@ -44,7 +42,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title(t.get("title", "🌐 MONITORING JARINGAN KAPAL"))
-# Menggunakan waktu lokal WIB yang akurat
 st.caption(f"{t.get('access_time', 'Waktu Akses')}: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')} WIB")
 
 try:
@@ -142,23 +139,33 @@ with st.sidebar:
     else:
         st.info("💡 Login admin untuk membuka menu **Add User** & **Add Profile**.")
 
-    # Pengaturan Konfigurasi Starlink
+    # Pengaturan Konfigurasi Starlink & Alokasi Backup
     with st.expander(t.get("sl_config", "📡 Konfigurasi Starlink"), expanded=False):
         with st.form("config_form"):
             total_gb = st.number_input(t.get("total_quota", "Total Kuota Bulan Ini (GB)"), value=float(config["total_gb"]), step=1.0)
             used_gb = st.number_input(t.get("total_used", "Total Terpakai Saat Ini (GB)"), value=float(config["used_gb"]), step=1.0)
             sisa_hari = st.number_input(t.get("rem_days", "Sisa Hari Siklus"), value=int(config["sisa_hari"]), step=1)
             tanggal_reset = st.text_input(t.get("reset_date", "Tanggal Reset"), value=str(config["tanggal_reset"]))
+            
+            st.markdown("---")
+            st.markdown(f"**{t.get('alloc_backup', '⚙️ Alokasi & Backup')}**")
+            alokasi_bosun = st.number_input(t.get("bosun_alloc", "Alokasi Khusus Bosun (GB)"), value=float(config.get("alokasi_bosun", 10.0)), step=1.0)
+            cadangan_sisa = st.number_input(t.get("backup_res", "Cadangan Sisa / Backup (GB)"), value=float(config.get("cadangan_sisa", 22.0)), step=1.0)
+            catatan_backup = st.text_area(t.get("backup_notes", "Keterangan Backup"), value=str(config.get("catatan_backup", "")))
+
             submit_config = st.form_submit_button(label=t.get("save_conf", "💾 Simpan Konfigurasi"))
             if submit_config:
                 config["total_gb"] = total_gb
                 config["used_gb"] = used_gb
                 config["sisa_hari"] = sisa_hari
                 config["tanggal_reset"] = tanggal_reset
+                config["alokasi_bosun"] = alokasi_bosun
+                config["cadangan_sisa"] = cadangan_sisa
+                config["catatan_backup"] = catatan_backup
                 save_config(config)
                 if st.session_state.admin_logged_in:
-                    save_audit_log("Memperbarui konfigurasi kuota Starlink", st.session_state.admin_username)
-                st.success("Konfigurasi disimpan!")
+                    save_audit_log("Memperbarui konfigurasi kuota & alokasi backup Starlink", st.session_state.admin_username)
+                st.success("Konfigurasi & Alokasi disimpan!")
                 st.rerun()
 
 # ==========================================
@@ -206,16 +213,20 @@ with col3:
     st.markdown(f'<div class="metric-card" style="border-left-color: {border_c};"><p class="metric-title">{t.get("lost_data", "LOST DATA")}</p><p class="metric-value">{prefix_lost}{lost_data_value} GB</p></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="metric-card"><p class="metric-title">{t.get("hotspot_active", "Hotspot Active")}</p><p class="metric-value">{jumlah_user_active} Online</p></div>', unsafe_allow_html=True)
 
-# Keterangan Lost Data / Status Kebutuhan Data (Defisit atau Surplus)
+# Keterangan Status Lost Data / Kebutuhan Data
 if lost_data_value < 0:
     st.error(t.get("danger", "⚠️ BAHAYA: Kebutuhan data tidak mencukupi (Defisit)"))
 else:
     st.success(t.get("safe", "✅ AMAN: Kebutuhan data mencukupi (Surplus)"))
 
+# Tampilkan Catatan Alokasi & Backup
+if config.get("catatan_backup"):
+    st.info(f"📌 **{t.get('notes', 'Catatan Alokasi Backup')}**: {config.get('catatan_backup')} (Alokasi Bosun: {config.get('alokasi_bosun', 0)} GB, Cadangan: {config.get('cadangan_sisa', 0)} GB)")
+
 st.markdown("---")
 
 # ==========================================
-# 3. USER PROFILE LIST (Hanya Tampil Jika Admin Login)
+# 3. USER PROFILE LIST (Admin View)
 # ==========================================
 if st.session_state.admin_logged_in:
     st.subheader("📋 User Profile List (Admin View)")
