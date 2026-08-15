@@ -219,10 +219,9 @@ if lost_data_value < 0:
 else:
     st.success(t.get("safe", "✅ AMAN: Kebutuhan data mencukupi (Surplus)"))
 
-# Tampilkan Catatan Alokasi & Backup
+# Tampilkan Catatan Alokasi & Backup yang rapi tanpa duplikasi teks
 if config.get("catatan_backup"):
-    st.info(f"📌 **{t.get('notes', 'Catatan Alokasi Backup')}**: {config.get('catatan_backup')} (Alokasi Bosun: {config.get('alokasi_bosun', 0)} GB, Cadangan: {config.get('cadangan_sisa', 0)} GB)")
-
+    st.info(f"📌 **{t.get('notes', 'Catatan Alokasi Backup')}**: {config.get('catatan_backup')}")
 st.markdown("---")
 
 # ==========================================
