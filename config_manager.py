@@ -5,6 +5,7 @@ import os
 CONFIG_FILE = "starlink_config.json"
 ADDON_FILE = "starlink_addons.json"
 ARCHIVE_FILE = "monthly_archives.json"
+LOCALE_FILE = "locales.json"
 
 def gib_to_gb(value_gib):
     return round(value_gib * 1.07374, 2)
@@ -20,8 +21,8 @@ def load_config():
         "tanggal_reset": "25/08/2026",
         "alokasi_bosun": 10.0,
         "cadangan_sisa": 22.0,
-        "catatan_backup": "10 GB allocated for Bosun, remaining 22 GB for lost data backup",
-        "last_updated": "Never updated",
+        "catatan_backup": "10 GB dialokasikan untuk Bosun, sisa 22 GB untuk backup data lost",
+        "last_updated": "Belum pernah diupdate",
     }
 
 def save_config(data):
@@ -51,3 +52,9 @@ def save_archive(month_name, data_df):
     archives[month_name] = data_df.to_dict(orient="records")
     with open(ARCHIVE_FILE, "w") as f:
         json.dump(archives, f, indent=4)
+
+def load_locales():
+    if os.path.exists(LOCALE_FILE):
+        with open(LOCALE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
