@@ -5,6 +5,7 @@ import os
 CONFIG_FILE = "starlink_config.json"
 ADDON_FILE = "starlink_addons.json"
 ARCHIVE_FILE = "monthly_archives.json"
+AUDIT_FILE = "audit_logs.json"
 
 def gib_to_gb(value_gib):
     return round(value_gib * 1.07374, 2)
@@ -53,7 +54,6 @@ def save_archive(month_name, data_df):
         json.dump(archives, f, indent=4)
 
 def load_locales():
-    # Kamus bahasa disematkan langsung untuk menghindari error missing file di server
     return {
       "id": {
         "title": "🌐 MONITORING JARINGAN KAPAL (STARLINK & MIKROTIK)",
@@ -145,7 +145,7 @@ def load_locales():
         "notes": "Backup Allocation Notes",
         "buffer": "Remaining Buffer",
         "hotspot_recap": "👥 MikroTik Hotspot User Recapitulation",
-        "fail_conn": "[FAILED] Unable to connect to MikroTik.",
+        "fail_conn": "[FAILED] Unable to connect to Mikrotik.",
         "no_data": "Hotspot data is empty.",
         "online_users": "🔥 Currently Online Hotspot Users",
         "no_active": "No active users currently online.",
@@ -158,3 +158,21 @@ def load_locales():
         "status_unused": "Unused"
       }
     }
+
+def load_audit_logs():
+    if os.path.exists(AUDIT_FILE):
+        with open(AUDIT_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_audit_log(action_desc, admin_user):
+    logs = load_audit_logs()
+    wib_time = datetime.datetime.utcnow() + datetime.timedelta(hours=7)
+    new_log = {
+        "timestamp": wib_time.strftime("%d/%m/%Y %H:%M:%S WIB"),
+        "admin": admin_user,
+        "action": action_desc
+    }
+    logs.insert(0, new_log)
+    with open(AUDIT_FILE, "w") as f:
+        json.dump(logs, f, indent=4)
