@@ -1,19 +1,16 @@
 import pandas as pd
 
 def warnai_status(val):
+    # Menggunakan warna yang lebih soft / pastel gelap agar elegan di mata
     if "PAS / HABIS KUOTA" in val:
-        return "background-color: #ef4444; color: white; font-weight: bold;"
+        return "background-color: rgba(239, 68, 68, 0.25); color: #fca5a5; font-weight: bold; border-left: 4px solid #ef4444;"
     elif "KRITIS" in val:
-        return "background-color: #eab308; color: #1e1b4b; font-weight: bold;"
+        return "background-color: rgba(234, 179, 8, 0.25); color: #fde047; font-weight: bold; border-left: 4px solid #eab308;"
     elif "Aman" in val:
-        return "background-color: #10b981; color: white; font-weight: bold;"
+        return "background-color: rgba(16, 185, 129, 0.25); color: #6ee7b7; font-weight: bold; border-left: 4px solid #10b981;"
     return ""
 
 def render_custom_table(df):
-    """
-    Merender tabel HTML kustom agar warnanya benar-benar menyatu dengan dark mode
-    dan tidak berubah putih walau tema Streamlit diganti-ganti.
-    """
     html = "<div style='overflow-x: auto;'><table style='width: 100%; border-collapse: collapse; background-color: #1e293b; color: #f8fafc; font-family: sans-serif; font-size: 14px; border-radius: 8px; overflow: hidden;'>"
     
     # Header Tabel
@@ -27,7 +24,6 @@ def render_custom_table(df):
         html += "<tr style='border-bottom: 1px solid #334155;'>"
         for col in df.columns:
             val = str(row[col])
-            # Cek jika kolom status untuk memberikan warna latar belakang khusus
             if col == "Status":
                 style = warnai_status(val)
                 html += f"<td style='padding: 10px 15px; {style}'>{val}</td>"

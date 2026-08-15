@@ -16,27 +16,42 @@ addons_list = load_addons()
 
 st.set_page_config(page_title="Monitoring Jaringan Kapal", layout="wide")
 
-# --- CUSTOM CSS: TEMA GALAXY MENYELURUH ---
+# --- CUSTOM CSS: PERBAIKAN KONTRAS SIDEBAR & TEKS ---
 st.markdown("""
     <style>
-    /* Memaksa background aplikasi & elemen utama menjadi gelap gulita serasi */
+    /* Background utama aplikasi */
     .stApp, header, [data-testid="stHeader"], [data-testid="stToolbar"] {
         background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
         color: #f8fafc !important;
     }
     
-    /* Styling Sidebar */
+    /* Styling Sidebar & Perbaikan Warna Teks di dalam Form */
     [data-testid="stSidebar"] {
         background-color: #1e293b !important;
         border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
+    
+    /* Memastikan SEMUA teks, label, dan judul di sidebar berwarna terang dan jelas */
     [data-testid="stSidebar"] h1, 
     [data-testid="stSidebar"] h2, 
     [data-testid="stSidebar"] h3, 
     [data-testid="stSidebar"] label, 
     [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] p {
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] .streamlit-expanderHeader {
         color: #f8fafc !important;
+        font-weight: 500 !important;
+    }
+
+    /* Memperjelas warna teks input form di sidebar */
+    [data-testid="stSidebar"] input {
+        color: #0f172a !important;
+        background-color: #f8fafc !important;
+    }
+    
+    [data-testid="stSidebar"] textarea {
+        color: #0f172a !important;
+        background-color: #f8fafc !important;
     }
 
     /* Kotak Info / Alert */
@@ -76,7 +91,7 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* Tombol & Tombol Download CSV */
+    /* Tombol & Tombol Submit/Login agar teksnya selalu putih jelas */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #3b82f6 !important;
         color: #ffffff !important;
@@ -352,7 +367,7 @@ else:
 
     df_crew = pd.DataFrame(parsed_data)
     
-    # Render menggunakan tabel HTML Kustom agar warnanya konsisten di Dark Mode
+    # Render tabel dengan warna status soft
     custom_table_html = render_custom_table(df_crew)
     st.markdown(custom_table_html, unsafe_allow_html=True)
 
