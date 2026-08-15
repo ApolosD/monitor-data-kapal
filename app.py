@@ -15,6 +15,21 @@ config = load_config()
 addons_list = load_addons()
 
 st.set_page_config(page_title="Monitoring Jaringan Kapal", layout="wide")
+st.markdown("""
+    <style>
+    /* Tema Galaxy */
+    .stApp, header, [data-testid="stHeader"] {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
+        color: #f8fafc !important;
+    }
+    [data-testid="stSidebar"] { background-color: #1e293b !important; }
+    [data-testid="stSidebar"] *, [data-testid="stSidebar"] label, [data-testid="stSidebar"] span { color: #f8fafc !important; }
+    [data-testid="stSidebar"] input { background-color: #f8fafc !important; color: #0f172a !important; }
+    div.stButton > button, div.stDownloadButton > button {
+        background-color: #3b82f6 !important; color: #ffffff !important; font-weight: 800 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- CUSTOM CSS: PERBAIKAN WARNA TEKS EXPANDER & SIDEBAR ---
 st.markdown("""
