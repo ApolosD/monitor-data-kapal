@@ -1,4 +1,5 @@
 import datetime
+import time
 import pandas as pd
 import streamlit as st
 
@@ -42,7 +43,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title(t.get("title", "🌐 MONITORING JARINGAN KAPAL"))
-st.caption(f"{t.get('access_time', 'Waktu Akses')}: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')} WIB")
+
+# Waktu Lokal Sesuai Perangkat / Server
+waktu_lokal = datetime.datetime.now()
+zona_waktu = time.tzname[time.daylight] if time.daylight < len(time.tzname) else "WIB"
+st.caption(f"{t.get('access_time', 'Waktu Akses')}: {waktu_lokal.strftime('%d/%m/%Y %H:%M:%S')} {zona_waktu}")
 
 try:
     MIKROTIK_HOST = st.secrets["MIKROTIK_HOST"]
@@ -219,9 +224,10 @@ if lost_data_value < 0:
 else:
     st.success(t.get("safe", "✅ AMAN: Kebutuhan data mencukupi (Surplus)"))
 
-# Tampilkan Catatan Alokasi & Backup yang rapi tanpa duplikasi teks
+# Tampilkan Catatan Alokasi & Backup yang Bersih (Tanpa Tumpang Tindih)
 if config.get("catatan_backup"):
     st.info(f"📌 **{t.get('notes', 'Catatan Alokasi Backup')}**: {config.get('catatan_backup')}")
+
 st.markdown("---")
 
 # ==========================================
@@ -344,7 +350,7 @@ st.subheader("📜 Riwayat Perubahan & Audit Log (Admin)")
 audit_logs = load_audit_logs()
 if audit_logs:
     df_logs = pd.DataFrame(audit_logs)
-    df_logs.columns = ["Waktu (WIB)", "Admin", "Aksi Perubahan"]
+    df_logs.columns = ["Waktu", "Admin", "Aksi Perubahan"]
     st.markdown(render_custom_table(df_logs, t), unsafe_allow_html=True)
 else:
     st.info("Belum ada catatan riwayat perubahan.")

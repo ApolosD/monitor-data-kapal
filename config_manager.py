@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import time
 
 CONFIG_FILE = "starlink_config.json"
 ADDON_FILE = "starlink_addons.json"
@@ -142,8 +143,9 @@ def load_audit_logs():
 def save_audit_log(action_desc, admin_user):
     logs = load_audit_logs()
     wib_time = datetime.datetime.now()
+    zona_waktu = time.tzname[time.daylight] if time.daylight < len(time.tzname) else "WIB"
     new_log = {
-        "timestamp": wib_time.strftime("%d/%m/%Y %H:%M:%S WIB"),
+        "timestamp": wib_time.strftime(f"%d/%m/%Y %H:%M:%S {zona_waktu}"),
         "admin": admin_user,
         "action": action_desc
     }
