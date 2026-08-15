@@ -2,7 +2,6 @@ import datetime
 import pandas as pd
 import streamlit as st
 
-# Mengimpor modul dari file-file di folder yang sama
 from config_manager import (
     gib_to_gb, load_addons, load_archives, load_config, 
     save_addons, save_archive, save_config, load_locales
@@ -10,20 +9,17 @@ from config_manager import (
 from mikrotik_connector import ambil_data_mikrotik
 from utils import render_custom_table
 
-# Inisialisasi konfigurasi, add-on, dan kamus bahasa
 config = load_config()
 addons_list = load_addons()
 locales = load_locales()
 
 st.set_page_config(page_title="Vessel Network Monitoring", layout="wide")
 
-# Pilihan Bahasa di Sidebar
 lang = st.sidebar.selectbox("Language / Bahasa", ["id", "en"])
 t = locales.get(lang, locales.get("id", {}))
 
 st.markdown("""
     <style>
-    /* Tema Galaxy */
     .stApp, header, [data-testid="stHeader"] {
         background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
         color: #f8fafc !important;
@@ -37,117 +33,52 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CUSTOM CSS: PERBAIKAN WARNA TEKS EXPANDER & SIDEBAR ---
 st.markdown("""
     <style>
-    /* Background utama aplikasi */
     .stApp, header, [data-testid="stHeader"], [data-testid="stToolbar"] {
         background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
         color: #f8fafc !important;
     }
-    
-    /* Styling Sidebar */
     [data-testid="stSidebar"] {
         background-color: #1e293b !important;
         border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
-    
-    /* Memaksa SEMUA teks, label, dan judul di sidebar berwarna terang */
-    [data-testid="stSidebar"] h1, 
-    [data-testid="stSidebar"] h2, 
-    [data-testid="stSidebar"] h3, 
-    [data-testid="stSidebar"] label, 
-    [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] p {
-        color: #f8fafc !important;
-        font-weight: 500 !important;
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, 
+    [data-testid="stSidebar"] label, [data-testid="stSidebar"] span, [data-testid="stSidebar"] p {
+        color: #f8fafc !important; font-weight: 500 !important;
     }
-
-    /* MEMPERBAIKI TEKS EXPANDER (MENU PANEL KONTROL) AGAR SELALU TERLIHAT JELAS */
     [data-testid="stSidebar"] [data-testid="stExpander"] summary span {
-        color: #ffffff !important;
-        font-weight: 600 !important;
+        color: #ffffff !important; font-weight: 600 !important;
     }
-    
     [data-testid="stSidebar"] [data-testid="stExpander"] summary {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border-radius: 8px !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background-color: rgba(255, 255, 255, 0.05) !important; border-radius: 8px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
-
-    /* Memperjelas warna teks input form di sidebar */
-    [data-testid="stSidebar"] input {
-        color: #0f172a !important;
-        background-color: #f8fafc !important;
+    [data-testid="stSidebar"] input, [data-testid="stSidebar"] textarea {
+        color: #0f172a !important; background-color: #f8fafc !important;
     }
-    
-    [data-testid="stSidebar"] textarea {
-        color: #0f172a !important;
-        background-color: #f8fafc !important;
-    }
-
-    /* Kotak Info / Alert */
     .stAlert {
-        background-color: #1e293b !important;
-        color: #38bdf8 !important;
-        border: 1px solid #334155 !important;
-        border-radius: 10px;
+        background-color: #1e293b !important; color: #38bdf8 !important; border: 1px solid #334155 !important; border-radius: 10px;
     }
-    .stAlert p {
-        color: #38bdf8 !important;
-        font-weight: 500;
-    }
-
-    /* Kartu Metrik Modern */
+    .stAlert p { color: #38bdf8 !important; font-weight: 500; }
     .metric-card {
-        background-color: rgba(30, 41, 59, 0.7);
-        backdrop-filter: blur(10px);
-        padding: 16px;
-        border-radius: 12px;
-        border-left: 5px solid #3b82f6;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        margin-bottom: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        background-color: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); padding: 16px; border-radius: 12px;
+        border-left: 5px solid #3b82f6; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); margin-bottom: 10px; border: 1px solid rgba(255, 255, 255, 0.05);
     }
-    .metric-title {
-        color: #94a3b8;
-        font-size: 13px;
-        margin: 0 0 5px 0;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-    .metric-value {
-        color: #f8fafc;
-        font-size: 24px;
-        margin: 0;
-        font-weight: 700;
-    }
-
-    /* Tombol & Tombol Submit/Login */
+    .metric-title { color: #94a3b8; font-size: 13px; margin: 0 0 5px 0; font-weight: 600; text-transform: uppercase; }
+    .metric-value { color: #f8fafc; font-size: 24px; margin: 0; font-weight: 700; }
     div.stButton > button, div.stDownloadButton > button {
-        background-color: #3b82f6 !important;
-        color: #ffffff !important;
-        font-weight: bold !important;
-        border-radius: 8px !important;
-        border: none !important;
-        width: 100%;
+        background-color: #3b82f6 !important; color: #ffffff !important; font-weight: bold !important; border-radius: 8px !important; border: none !important; width: 100%;
     }
     div.stButton > button:hover, div.stDownloadButton > button:hover {
-        background-color: #2563eb !important;
-        color: #ffffff !important;
+        background-color: #2563eb !important; color: #ffffff !important;
     }
-
-    /* Judul Utama */
-    h1, h2, h3 {
-        color: #f8fafc !important;
-    }
+    h1, h2, h3 { color: #f8fafc !important; }
     </style>
 """, unsafe_allow_html=True)
 
 st.title(t.get("title", "🌐 MONITORING JARINGAN KAPAL"))
 st.caption(f"{t.get('access_time', 'Waktu Akses')}: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')} WIB")
 
-# Ambil secrets untuk Mikrotik
 try:
     MIKROTIK_HOST = st.secrets["MIKROTIK_HOST"]
     MIKROTIK_PORT = int(st.secrets["MIKROTIK_PORT"])
@@ -156,12 +87,8 @@ try:
 except:
     MIKROTIK_HOST, MIKROTIK_PORT, MIKROTIK_USER, MIKROTIK_PASS = "", 0, "", ""
 
-# Ambil data dari mikrotik_connector.py
 raw_users, raw_active = ambil_data_mikrotik(MIKROTIK_HOST, MIKROTIK_PORT, MIKROTIK_USER, MIKROTIK_PASS)
 
-# ==========================================
-# SIDEBAR: KONTROL DI KIRI
-# ==========================================
 with st.sidebar:
     st.header(t.get("ctrl_panel", "⚙️ Panel Kontrol"))
     
@@ -241,9 +168,6 @@ with st.sidebar:
                 st.session_state.admin_logged_in = False
                 st.rerun()
 
-# ==========================================
-# PROSES DATA MIKROTIK
-# ==========================================
 total_mikrotik_gib = 0.0
 total_sisa_limit_crew_gb = 0.0
 
@@ -281,9 +205,6 @@ sisa_starlink = round(config["total_gb"] - config["used_gb"], 2)
 cadangan_sisa = config.get("cadangan_sisa", 22.0)
 lost_data_value = round(sisa_starlink - total_sisa_limit_crew_gb, 2)
 
-# ==========================================
-# TAMPILAN UTAMA: KARTU METRIK MODERN
-# ==========================================
 st.subheader(t.get("status_title", "📊 Status Starlink & Perbandingan Jaringan"))
 
 col1, col2, col3 = st.columns(3)
@@ -343,9 +264,6 @@ st.info(f"📝 **{t.get('notes', 'Catatan Alokasi Backup')}:** {config.get('cata
 
 st.markdown("---")
 
-# ==========================================
-# TABEL REKAPITULASI HOTSPOT MIKROTIK
-# ==========================================
 st.subheader(t.get("hotspot_recap", "👥 Rekapitulasi Pengguna Hotspot Mikrotik"))
 
 df_crew = pd.DataFrame()
@@ -390,7 +308,7 @@ else:
 
         parsed_data.append({
             "User": nama,
-            "Total Used (GB)": f"{total_gb_tampil:.2f} GB",
+            "Total Used (GB)": f"{total_gb_tamples:.2f} GB" if 'tamples' in locals() else f"{total_gb_tampil:.2f} GB",
             "System Limit": limit_str,
             "Crew Data Remaining": sisa_data_crew_str,
             "Percentage": persentase_str,
@@ -399,13 +317,9 @@ else:
 
     df_crew = pd.DataFrame(parsed_data)
     
-    # Render tabel dengan warna status soft
     custom_table_html = render_custom_table(df_crew, t)
     st.markdown(custom_table_html, unsafe_allow_html=True)
 
-# ==========================================
-# TABEL USER ACTIVE & DOWNLOAD
-# ==========================================
 st.markdown("---")
 st.subheader(t.get("online_users", "🔥 Pengguna Hotspot Online Saat Ini (Active)"))
 
