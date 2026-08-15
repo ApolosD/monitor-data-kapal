@@ -26,7 +26,7 @@ def load_config():
     }
 
 def save_config(data):
-    wib_time = datetime.datetime.utcnow() + datetime.timedelta(hours=7)
+    wib_time = datetime.datetime.now()
     data["last_updated"] = wib_time.strftime("%d/%m/%Y %H:%M:%S")
     with open(CONFIG_FILE, "w") as f:
         json.dump(data, f)
@@ -89,8 +89,8 @@ def load_locales():
         "starlink_used": "Starlink Terpakai",
         "mikrotik_total": "Total Mikrotik Users",
         "hotspot_active": "Hotspot Active",
-        "danger": "⚠️ BAHAYA: Defisit",
-        "safe": "✅ AMAN: Surplus",
+        "danger": "⚠️ BAHAYA: Kebutuhan data tidak mencukupi (Defisit)",
+        "safe": "✅ AMAN: Kebutuhan data mencukupi (Surplus)",
         "notes": "Catatan Alokasi Backup",
         "buffer": "Buffer Sisa",
         "hotspot_recap": "👥 Rekapitulasi Pengguna Hotspot Mikrotik",
@@ -140,8 +140,8 @@ def load_locales():
         "starlink_used": "Starlink Used",
         "mikrotik_total": "Total MikroTik Users",
         "hotspot_active": "Active Hotspot",
-        "danger": "⚠️ DANGER: Deficit",
-        "safe": "✅ SAFE: Surplus",
+        "danger": "⚠️ DANGER: Data requirement is insufficient (Deficit)",
+        "safe": "✅ SAFE: Data requirement is sufficient (Surplus)",
         "notes": "Backup Allocation Notes",
         "buffer": "Remaining Buffer",
         "hotspot_recap": "👥 MikroTik Hotspot User Recapitulation",
@@ -167,7 +167,7 @@ def load_audit_logs():
 
 def save_audit_log(action_desc, admin_user):
     logs = load_audit_logs()
-    wib_time = datetime.datetime.utcnow() + datetime.timedelta(hours=7)
+    wib_time = datetime.datetime.now()
     new_log = {
         "timestamp": wib_time.strftime("%d/%m/%Y %H:%M:%S WIB"),
         "admin": admin_user,

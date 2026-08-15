@@ -44,6 +44,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title(t.get("title", "🌐 MONITORING JARINGAN KAPAL"))
+# Menggunakan waktu lokal WIB yang akurat
 st.caption(f"{t.get('access_time', 'Waktu Akses')}: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')} WIB")
 
 try:
@@ -161,7 +162,7 @@ with st.sidebar:
                 st.rerun()
 
 # ==========================================
-# PROSES DATA & TAMPILAN UTAMA (6 VARIABEL METRIK)
+# PROSES DATA & TAMPILAN UTAMA (6 METRIK)
 # ==========================================
 total_mikrotik_gib = 0.0
 total_sisa_limit_crew_gb = 0.0
@@ -204,6 +205,12 @@ with col3:
     border_c = "#ef4444" if lost_data_value < 0 else "#10b981"
     st.markdown(f'<div class="metric-card" style="border-left-color: {border_c};"><p class="metric-title">{t.get("lost_data", "LOST DATA")}</p><p class="metric-value">{prefix_lost}{lost_data_value} GB</p></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="metric-card"><p class="metric-title">{t.get("hotspot_active", "Hotspot Active")}</p><p class="metric-value">{jumlah_user_active} Online</p></div>', unsafe_allow_html=True)
+
+# Keterangan Lost Data / Status Kebutuhan Data (Defisit atau Surplus)
+if lost_data_value < 0:
+    st.error(t.get("danger", "⚠️ BAHAYA: Kebutuhan data tidak mencukupi (Defisit)"))
+else:
+    st.success(t.get("safe", "✅ AMAN: Kebutuhan data mencukupi (Surplus)"))
 
 st.markdown("---")
 
