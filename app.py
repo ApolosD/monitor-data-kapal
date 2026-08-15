@@ -16,16 +16,25 @@ addons_list = load_addons()
 
 st.set_page_config(page_title="Monitoring Jaringan Kapal", layout="wide")
 
-# --- CUSTOM CSS UNTUK TAMPILAN MODERN ---
+# --- CUSTOM CSS: TEMA BACKGROUND GALAXY / LAUT DALAM & KARTU MODERN ---
 st.markdown("""
     <style>
+    /* Mengubah background utama aplikasi menjadi tema ruang angkasa/laut dalam */
+    .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%);
+        color: #f8fafc;
+    }
+    
+    /* Styling Kartu Metrik */
     .metric-card {
-        background-color: #1e293b;
+        background-color: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(10px);
         padding: 16px;
         border-radius: 12px;
         border-left: 5px solid #3b82f6;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         margin-bottom: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
     .metric-title {
         color: #94a3b8;
@@ -39,6 +48,11 @@ st.markdown("""
         font-size: 24px;
         margin: 0;
         font-weight: 700;
+    }
+    
+    /* Mempercantik teks judul agar kontras di mode gelap */
+    h1, h2, h3 {
+        color: #f8fafc !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -59,12 +73,12 @@ except:
 raw_users, raw_active = ambil_data_mikrotik(MIKROTIK_HOST, MIKROTIK_PORT, MIKROTIK_USER, MIKROTIK_PASS)
 
 # ==========================================
-# SIDEBAR: KONFIGURASI & ADD-ON (EXPANDER)
+# SIDEBAR: KONTROL DI KIRI (TETAP RAPI)
 # ==========================================
 with st.sidebar:
     st.header("⚙️ Panel Kontrol")
     
-    with st.expander("📡 Konfigurasi Starlink", expanded=True):
+    with st.expander("📡 Konfigurasi Starlink", expanded=False):
         with st.form("config_form"):
             total_gb = st.number_input("Total Kuota Bulan Ini (GB)", value=float(config["total_gb"]), step=1.0)
             used_gb = st.number_input("Total Terpakai Saat Ini (GB)", value=float(config["used_gb"]), step=1.0)
