@@ -308,7 +308,7 @@ else:
 
         parsed_data.append({
             "User": nama,
-            "Total Used (GB)": f"{total_gb_tamples:.2f} GB" if 'tamples' in locals() else f"{total_gb_tampil:.2f} GB",
+            "Total Used (GB)": f"{total_gb_tampil:.2f} GB",
             "System Limit": limit_str,
             "Crew Data Remaining": sisa_data_crew_str,
             "Percentage": persentase_str,
