@@ -16,16 +16,16 @@ addons_list = load_addons()
 
 st.set_page_config(page_title="Monitoring Jaringan Kapal", layout="wide")
 
-# --- CUSTOM CSS: TEMA GALAXY & PERBAIKAN UI/UX ---
+# --- CUSTOM CSS: DARK MODE FULL & PERBAIKAN TABEL ---
 st.markdown("""
     <style>
-    /* 1. Background Utama Aplikasi (Galaxy / Deep Ocean) */
-    .stApp {
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%);
-        color: #f8fafc;
+    /* 1. Memaksa Seluruh Tema Aplikasi Menjadi Gelap Menyeluruh */
+    .stApp, header, [data-testid="stHeader"] {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
+        color: #f8fafc !important;
     }
     
-    /* 2. Styling Sidebar Menjadi Gelap & Kontras */
+    /* 2. Styling Sidebar Menjadi Gelap */
     [data-testid="stSidebar"] {
         background-color: #1e293b !important;
         border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -39,10 +39,10 @@ st.markdown("""
         color: #f8fafc !important;
     }
 
-    /* 3. Perbaikan Kotak Info / Alert (Catatan Alokasi Backup) */
+    /* 3. Perbaikan Kotak Info / Alert */
     .stAlert {
         background-color: #1e293b !important;
-        color: #38bdf8 !important; /* Warna teks biru terang agar mudah dibaca */
+        color: #38bdf8 !important;
         border: 1px solid #334155 !important;
         border-radius: 10px;
     }
@@ -76,7 +76,7 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* 5. Perbaikan Tombol & Tombol Download CSV agar Selalu Terlihat Jelas */
+    /* 5. Perbaikan Tombol & Tombol Download CSV */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #3b82f6 !important;
         color: #ffffff !important;
@@ -90,12 +90,18 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 6. Penyesuaian Tabel Dataframe agar Menyatu dengan Tema Gelap */
+    /* 6. MEMPERCANTIK TABEL / DATAFRAME AGAR MATCH DENGAN BACKGROUND */
     [data-testid="stDataFrame"] {
         background-color: #1e293b !important;
-        border-radius: 10px;
-        padding: 5px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Mengubah warna teks dan latar baris tabel agar kontras dan elegan */
+    [data-testid="stDataFrame"] iframe {
+        background-color: #1e293b !important;
     }
 
     /* Judul Utama */
