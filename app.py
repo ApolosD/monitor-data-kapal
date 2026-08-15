@@ -16,7 +16,7 @@ addons_list = load_addons()
 
 st.set_page_config(page_title="Monitoring Jaringan Kapal", layout="wide")
 
-# --- CUSTOM CSS: PERBAIKAN KONTRAS SIDEBAR & TEKS ---
+# --- CUSTOM CSS: PERBAIKAN WARNA TEKS EXPANDER & SIDEBAR ---
 st.markdown("""
     <style>
     /* Background utama aplikasi */
@@ -25,22 +25,33 @@ st.markdown("""
         color: #f8fafc !important;
     }
     
-    /* Styling Sidebar & Perbaikan Warna Teks di dalam Form */
+    /* Styling Sidebar */
     [data-testid="stSidebar"] {
         background-color: #1e293b !important;
         border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
     
-    /* Memastikan SEMUA teks, label, dan judul di sidebar berwarna terang dan jelas */
+    /* Memaksa SEMUA teks, label, dan judul di sidebar berwarna terang */
     [data-testid="stSidebar"] h1, 
     [data-testid="stSidebar"] h2, 
     [data-testid="stSidebar"] h3, 
     [data-testid="stSidebar"] label, 
     [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] .streamlit-expanderHeader {
+    [data-testid="stSidebar"] p {
         color: #f8fafc !important;
         font-weight: 500 !important;
+    }
+
+    /* MEMPERBAIKI TEKS EXPANDER (MENU PANEL KONTROL) AGAR SELALU TERLIHAT JELAS */
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary span {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
     /* Memperjelas warna teks input form di sidebar */
@@ -91,7 +102,7 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* Tombol & Tombol Submit/Login agar teksnya selalu putih jelas */
+    /* Tombol & Tombol Submit/Login */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #3b82f6 !important;
         color: #ffffff !important;
