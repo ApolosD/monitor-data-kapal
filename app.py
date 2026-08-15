@@ -8,7 +8,7 @@ from config_manager import (
     save_addons, save_archive, save_config
 )
 from mikrotik_connector import ambil_data_mikrotik
-from utils import warnai_status
+from utils import render_custom_table
 
 # Inisialisasi konfigurasi dan add-on
 config = load_config()
@@ -16,16 +16,16 @@ addons_list = load_addons()
 
 st.set_page_config(page_title="Monitoring Jaringan Kapal", layout="wide")
 
-# --- CUSTOM CSS: DARK MODE FULL & PERBAIKAN TABEL ---
+# --- CUSTOM CSS: TEMA GALAXY MENYELURUH ---
 st.markdown("""
     <style>
-    /* 1. Memaksa Seluruh Tema Aplikasi Menjadi Gelap Menyeluruh */
-    .stApp, header, [data-testid="stHeader"] {
+    /* Memaksa background aplikasi & elemen utama menjadi gelap gulita serasi */
+    .stApp, header, [data-testid="stHeader"], [data-testid="stToolbar"] {
         background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
         color: #f8fafc !important;
     }
     
-    /* 2. Styling Sidebar Menjadi Gelap */
+    /* Styling Sidebar */
     [data-testid="stSidebar"] {
         background-color: #1e293b !important;
         border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -39,7 +39,7 @@ st.markdown("""
         color: #f8fafc !important;
     }
 
-    /* 3. Perbaikan Kotak Info / Alert */
+    /* Kotak Info / Alert */
     .stAlert {
         background-color: #1e293b !important;
         color: #38bdf8 !important;
@@ -51,7 +51,7 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* 4. Styling Kartu Metrik Modern */
+    /* Kartu Metrik Modern */
     .metric-card {
         background-color: rgba(30, 41, 59, 0.7);
         backdrop-filter: blur(10px);
@@ -76,7 +76,7 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* 5. Perbaikan Tombol & Tombol Download CSV */
+    /* Tombol & Tombol Download CSV */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #3b82f6 !important;
         color: #ffffff !important;
@@ -88,20 +88,6 @@ st.markdown("""
     div.stButton > button:hover, div.stDownloadButton > button:hover {
         background-color: #2563eb !important;
         color: #ffffff !important;
-    }
-
-    /* 6. MEMPERCANTIK TABEL / DATAFRAME AGAR MATCH DENGAN BACKGROUND */
-    [data-testid="stDataFrame"] {
-        background-color: #1e293b !important;
-        border-radius: 12px;
-        padding: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-    }
-    
-    /* Mengubah warna teks dan latar baris tabel agar kontras dan elegan */
-    [data-testid="stDataFrame"] iframe {
-        background-color: #1e293b !important;
     }
 
     /* Judul Utama */
@@ -220,12 +206,12 @@ if raw_users:
         b_out = int(u.get("bytes-out", 0))
         total_bytes = b_in + b_out
         total_gib = total_bytes / (1024**3)
+        pemakaian_aktual = gib_to_gb(total_gib)
         total_mikrotik_gib += total_gib
 
         limit_bytes_raw = u.get("limit-bytes-total", 0)
         if limit_bytes_raw and int(limit_bytes_raw) > 0:
             limit_gb_murni = round(int(limit_bytes_raw) / (1024**3))
-            pemakaian_aktual = gib_to_gb(total_gib)
             total_gb_tampil = round(pemakaian_aktual / 0.80, 2)
             sisa_user_gb = round(limit_gb_murni - total_gb_tampil, 2)
             if sisa_user_gb > 0:
@@ -335,7 +321,7 @@ else:
         limit_str = "Unlimited"
         sisa_data_crew_str = "N/A"
         persentase_str = "N/A"
-        status = "Aman (Normal)"
+        status = "Aman"
 
         if limit_bytes_raw > 0:
             limit_gb_murni = round(limit_bytes_raw / (1024**3))
@@ -365,8 +351,10 @@ else:
         })
 
     df_crew = pd.DataFrame(parsed_data)
-    df_styled = df_crew.style.map(warnai_status, subset=["Status"])
-    st.dataframe(df_styled, use_container_width=True, height=400)
+    
+    # Render menggunakan tabel HTML Kustom agar warnanya konsisten di Dark Mode
+    custom_table_html = render_custom_table(df_crew)
+    st.markdown(custom_table_html, unsafe_allow_html=True)
 
 # ==========================================
 # TABEL USER ACTIVE & DOWNLOAD
@@ -384,7 +372,8 @@ if raw_active:
             "Uptime": act.get("uptime", "-"),
             "Pemakaian Session (GB)": f"{gib_to_gb((int(act.get('bytes-in', 0)) + int(act.get('bytes-out', 0))) / (1024**3)):.2f} GB",
         })
-    st.dataframe(pd.DataFrame(parsed_active), use_container_width=True)
+    df_active = pd.DataFrame(parsed_active)
+    st.markdown(render_custom_table(df_active), unsafe_allow_html=True)
 else:
     st.info("Tidak ada pengguna aktif saat ini.")
 
