@@ -109,10 +109,7 @@ with st.sidebar:
                             nu_name, nu_pass, nu_profile, limit_bytes_val
                         )
                         if success:
-                            # Catat Audit Log otomatis
-                            log_desc = f"Membuat User Hotspot baru: '{nu_name}' (Profile: {nu_profile})"
-                            save_audit_log(log_desc, st.session_state.admin_username)
-                            
+                            save_audit_log(f"Membuat User Hotspot baru: '{nu_name}' (Profile: {nu_profile})", st.session_state.admin_username)
                             st.success(f"User {nu_name} berhasil dibuat & tercatat di log!")
                             st.rerun()
                         else:
@@ -134,10 +131,7 @@ with st.sidebar:
                             np_name, np_shared, np_rate
                         )
                         if success:
-                            # Catat Audit Log otomatis
-                            log_desc = f"Membuat Profil Hotspot baru: '{np_name}' (Shared: {np_shared})"
-                            save_audit_log(log_desc, st.session_state.admin_username)
-                            
+                            save_audit_log(f"Membuat Profil Hotspot baru: '{np_name}' (Shared: {np_shared})", st.session_state.admin_username)
                             st.success(f"Profil {np_name} berhasil dibuat & tercatat di log!")
                             st.rerun()
                         else:
@@ -145,7 +139,7 @@ with st.sidebar:
                     else:
                         st.warning("Nama profil tidak boleh kosong!")
     else:
-        st.info("💡 Login sebagai admin di atas untuk membuka menu **Add User** dan **Add Profile**.")
+        st.info("💡 Login admin untuk membuka menu **Add User** & **Add Profile**.")
 
     # Pengaturan Konfigurasi Starlink
     with st.expander(t.get("sl_config", "📡 Konfigurasi Starlink"), expanded=False):
@@ -167,10 +161,12 @@ with st.sidebar:
                 st.rerun()
 
 # ==========================================
-# PROSES DATA & TAMPILAN UTAMA
+# PROSES DATA & TAMPILAN UTAMA (6 VARIABEL METRIK)
 # ==========================================
 total_mikrotik_gib = 0.0
 total_sisa_limit_crew_gb = 0.0
+jumlah_user_mikrotik = len(raw_users) if raw_users else 0
+jumlah_user_active = len(raw_active) if raw_active else 0
 
 if raw_users:
     for u in raw_users:
@@ -194,39 +190,42 @@ total_sisa_limit_crew_gb = round(total_sisa_limit_crew_gb, 2)
 sisa_starlink = round(config["total_gb"] - config["used_gb"], 2)
 lost_data_value = round(sisa_starlink - total_sisa_limit_crew_gb, 2)
 
-# Metrik Utama
+# Tampilkan 6 Metrik Lengkap
 st.subheader(t.get("status_title", "📊 Status Starlink & Perbandingan Jaringan"))
 col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown(f'<div class="metric-card"><p class="metric-title">{t.get("starlink_rem", "Sisa Kuota Starlink")}</p><p class="metric-value">{sisa_starlink} GB</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="metric-card"><p class="metric-title">{t.get("starlink_used", "Starlink Terpakai")}</p><p class="metric-value">{config["used_gb"]} GB</p></div>', unsafe_allow_html=True)
 with col2:
     st.markdown(f'<div class="metric-card"><p class="metric-title">{t.get("crew_rem", "Total Sisa Limit Crew")}</p><p class="metric-value">{total_sisa_limit_crew_gb} GB</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="metric-card"><p class="metric-title">{t.get("mikrotik_total", "Total Mikrotik Users")}</p><p class="metric-value">{jumlah_user_mikrotik} Users</p></div>', unsafe_allow_html=True)
 with col3:
     prefix_lost = "+" if lost_data_value > 0 else ""
     border_c = "#ef4444" if lost_data_value < 0 else "#10b981"
     st.markdown(f'<div class="metric-card" style="border-left-color: {border_c};"><p class="metric-title">{t.get("lost_data", "LOST DATA")}</p><p class="metric-value">{prefix_lost}{lost_data_value} GB</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="metric-card"><p class="metric-title">{t.get("hotspot_active", "Hotspot Active")}</p><p class="metric-value">{jumlah_user_active} Online</p></div>', unsafe_allow_html=True)
 
 st.markdown("---")
 
 # ==========================================
-# 3. USER PROFILE LIST
+# 3. USER PROFILE LIST (Hanya Tampil Jika Admin Login)
 # ==========================================
-st.subheader("📋 User Profile List")
-if raw_profiles:
-    profile_data = []
-    for p in raw_profiles:
-        profile_data.append({
-            "Name": p.get("name", ""),
-            "Shared Users": p.get("shared-users", "1"),
-            "Rate Limit": p.get("rate-limit", "-"),
-            "Transparent Proxy": p.get("transparent-proxy", "false")
-        })
-    df_profile = pd.DataFrame(profile_data)
-    st.markdown(render_custom_table(df_profile, t), unsafe_allow_html=True)
-else:
-    st.info("Tidak ada data profil hotspot.")
-
-st.markdown("---")
+if st.session_state.admin_logged_in:
+    st.subheader("📋 User Profile List (Admin View)")
+    if raw_profiles:
+        profile_data = []
+        for p in raw_profiles:
+            profile_data.append({
+                "Name": p.get("name", ""),
+                "Shared Users": p.get("shared-users", "1"),
+                "Rate Limit": p.get("rate-limit", "-"),
+                "Transparent Proxy": p.get("transparent-proxy", "false")
+            })
+        df_profile = pd.DataFrame(profile_data)
+        st.markdown(render_custom_table(df_profile, t), unsafe_allow_html=True)
+    else:
+        st.info("Tidak ada data profil hotspot.")
+    st.markdown("---")
 
 # ==========================================
 # 4. USER LIST
@@ -296,15 +295,38 @@ with col_dl2:
         csv_data = df_crew.to_csv(index=False).encode("utf-8")
         st.download_button(label=t.get("btn_download", "📄 Download Rekap (CSV)"), data=csv_data, file_name="hotspot_recap.csv", mime="text/csv", use_container_width=True)
 
+st.markdown("---")
+
 # ==========================================
-# 5. AUDIT LOG / RIWAYAT PERUBAHAN (Admin Only)
+# 5. HOTSPOT ACTIVE (Pengguna Online)
+# ==========================================
+st.subheader(t.get("online_users", "🔥 Pengguna Hotspot Online Saat Ini (Active)"))
+if raw_active:
+    active_data = []
+    for act in raw_active:
+        b_in_act = int(act.get("bytes-in", 0))
+        b_out_act = int(act.get("bytes-out", 0))
+        active_gib = (b_in_act + b_out_act) / (1024**3)
+        active_data.append({
+            "User": act.get("user", "Unknown"),
+            "IP Address": act.get("address", "-"),
+            "MAC Address": act.get("mac-address", "-"),
+            "Uptime": act.get("uptime", "-"),
+            "Session Traffic": f"{gib_to_gb(active_gib):.2f} GB"
+        })
+    df_active = pd.DataFrame(active_data)
+    st.markdown(render_custom_table(df_active, t), unsafe_allow_html=True)
+else:
+    st.info(t.get("no_active", "Tidak ada pengguna aktif saat ini."))
+
+# ==========================================
+# 6. AUDIT LOG / RIWAYAT PERUBAHAN (Admin Only)
 # ==========================================
 st.markdown("---")
 st.subheader("📜 Riwayat Perubahan & Audit Log (Admin)")
 audit_logs = load_audit_logs()
 if audit_logs:
     df_logs = pd.DataFrame(audit_logs)
-    # Ganti nama kolom agar rapi
     df_logs.columns = ["Waktu (WIB)", "Admin", "Aksi Perubahan"]
     st.markdown(render_custom_table(df_logs, t), unsafe_allow_html=True)
 else:
