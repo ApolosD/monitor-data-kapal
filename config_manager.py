@@ -20,8 +20,8 @@ def load_config():
         "tanggal_reset": "25/08/2026",
         "alokasi_bosun": 10.0,
         "cadangan_sisa": 22.0,
-        "catatan_backup": "10 GB dialokasikan untuk Bosun, sisa 22 GB untuk backup data lost",
-        "last_updated": "Belum pernah diupdate",
+        "catatan_backup": "10 GB allocated for Bosun, remaining 22 GB for lost data backup",
+        "last_updated": "Never updated",
     }
 
 def save_config(data):
