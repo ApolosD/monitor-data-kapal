@@ -1,50 +1,178 @@
-import librouteros
-import streamlit as st
+import datetime
+import json
+import os
 
-@st.cache_data(ttl=60)
-def ambil_data_mikrotik(host, port, user, passwd):
-    try:
-        api = librouteros.connect(
-            host=host, username=user, password=passwd, port=port
-        )
-        list_user = list(api.path("ip", "hotspot", "user"))
-        list_active = list(api.path("ip", "hotspot", "active"))
-        list_profile = list(api.path("ip", "hotspot", "user", "profile"))
-        api.close()
-        return list_user, list_active, list_profile
-    except Exception:
-        return None, None, None
+CONFIG_FILE = "starlink_config.json"
+ADDON_FILE = "starlink_addons.json"
+ARCHIVE_FILE = "monthly_archives.json"
+AUDIT_FILE = "audit_logs.json"
 
-def tambah_user_hotspot(host, port, user, passwd, nama_user, password_user, profile_user, limit_bytes):
-    try:
-        api = librouteros.connect(
-            host=host, username=user, password=passwd, port=port
-        )
-        api.path("ip", "hotspot", "user").add(
-            name=nama_user,
-            password=password_user,
-            profile=profile_user,
-            **({"limit-bytes-total": str(limit_bytes)} if limit_bytes else {})
-        )
-        api.close()
-        return True, "Berhasil membuat user hotspot!"
-    except Exception as e:
-        return False, str(e)
+def gib_to_gb(value_gib):
+    return round(value_gib * 1.07374, 2)
 
-def tambah_profile_hotspot(host, port, user, passwd, profile_name, shared_users, rate_limit):
-    try:
-        api = librouteros.connect(
-            host=host, username=user, password=passwd, port=port
-        )
-        params = {
-            "name": profile_name,
-            "shared-users": str(shared_users)
-        }
-        if rate_limit:
-            params["rate-limit"] = rate_limit
-            
-        api.path("ip", "hotspot", "user", "profile").add(**params)
-        api.close()
-        return True, "Berhasil membuat profil hotspot!"
-    except Exception as e:
-        return False, str(e)
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    return {
+        "total_gb": 750.0,
+        "used_gb": 674.0,
+        "sisa_hari": 10,
+        "tanggal_reset": "25/08/2026",
+        "alokasi_bosun": 10.0,
+        "cadangan_sisa": 22.0,
+        "catatan_backup": "10 GB dialokasikan untuk Bosun, sisa 22 GB untuk backup data lost",
+        "last_updated": "Belum pernah diupdate",
+    }
+
+def save_config(data):
+    wib_time = datetime.datetime.utcnow() + datetime.timedelta(hours=7)
+    data["last_updated"] = wib_time.strftime("%d/%m/%Y %H:%M:%S")
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(data, f)
+
+def load_addons():
+    if os.path.exists(ADDON_FILE):
+        with open(ADDON_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_addons(addons):
+    with open(ADDON_FILE, "w") as f:
+        json.dump(addons, f)
+
+def load_archives():
+    if os.path.exists(ARCHIVE_FILE):
+        with open(ARCHIVE_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_archive(month_name, data_df):
+    archives = load_archives()
+    archives[month_name] = data_df.to_dict(orient="records")
+    with open(ARCHIVE_FILE, "w") as f:
+        json.dump(archives, f, indent=4)
+
+def load_locales():
+    return {
+      "id": {
+        "title": "🌐 MONITORING JARINGAN KAPAL (STARLINK & MIKROTIK)",
+        "access_time": "Waktu Akses",
+        "ctrl_panel": "⚙️ Panel Kontrol",
+        "sl_config": "📡 Konfigurasi Starlink",
+        "total_quota": "Total Kuota Bulan Ini (GB)",
+        "total_used": "Total Terpakai Saat Ini (GB)",
+        "rem_days": "Sisa Hari Siklus",
+        "reset_date": "Tanggal Reset",
+        "alloc_backup": "⚙️ Alokasi & Backup",
+        "bosun_alloc": "Alokasi Khusus Bosun (GB)",
+        "backup_res": "Cadangan Sisa / Backup (GB)",
+        "backup_notes": "Keterangan Backup",
+        "save_conf": "💾 Simpan Konfigurasi",
+        "conf_saved": "Konfigurasi disimpan!",
+        "addon_rec": "📦 Record Pembelian Add-on",
+        "crew_name": "Nama Crew / User",
+        "purchase_date": "Tanggal Pembelian",
+        "addon_amt": "Jumlah Add-on (GB)",
+        "add_addon": "➕ Tambah Add-on",
+        "addon_added": "Add-on ditambahkan!",
+        "addon_hist": "📋 Riwayat Add-on",
+        "admin_panel": "🔒 Panel Admin & Arsip",
+        "login_err": "Login Salah!",
+        "archive_name": "Nama Periode Arsip",
+        "save_archive": "💾 Simpan Arsip Bulan Ini",
+        "archive_saved": "Arsip disimpan!",
+        "status_title": "📊 Status Starlink & Perbandingan Jaringan",
+        "starlink_rem": "Sisa Kuota Starlink",
+        "crew_rem": "Total Sisa Limit Crew",
+        "lost_data": "LOST DATA",
+        "starlink_used": "Starlink Terpakai",
+        "mikrotik_total": "Total Mikrotik Users",
+        "hotspot_active": "Hotspot Active",
+        "danger": "⚠️ BAHAYA: Defisit",
+        "safe": "✅ AMAN: Surplus",
+        "notes": "Catatan Alokasi Backup",
+        "buffer": "Buffer Sisa",
+        "hotspot_recap": "👥 Rekapitulasi Pengguna Hotspot Mikrotik",
+        "fail_conn": "[GAGAL] Tidak dapat terhubung ke Mikrotik.",
+        "no_data": "Data hotspot kosong.",
+        "online_users": "🔥 Pengguna Hotspot Online Saat Ini (Active)",
+        "no_active": "Tidak ada pengguna aktif saat ini.",
+        "download_recap": "📥 Unduh rekapan data penggunaan kuota hotspot crew.",
+        "btn_download": "📄 Download Rekap (CSV)",
+        "status_exhausted": "PAS / HABIS KUOTA",
+        "status_critical": "KRITIS",
+        "status_safe": "Aman",
+        "status_active": "Aktif (Unlimited)",
+        "status_unused": "Belum Digunakan"
+      },
+      "en": {
+        "title": "🌐 VESSEL NETWORK MONITORING (STARLINK & MIKROTIK)",
+        "access_time": "Access Time",
+        "ctrl_panel": "⚙️ Control Panel",
+        "sl_config": "📡 Starlink Configuration",
+        "total_quota": "Total Monthly Quota (GB)",
+        "total_used": "Current Total Used (GB)",
+        "rem_days": "Remaining Cycle Days",
+        "reset_date": "Reset Date",
+        "alloc_backup": "⚙️ Allocation & Backup",
+        "bosun_alloc": "Bosun Dedicated Allocation (GB)",
+        "backup_res": "Remaining Reserve / Backup (GB)",
+        "backup_notes": "Backup Notes",
+        "save_conf": "💾 Save Configuration",
+        "conf_saved": "Configuration saved!",
+        "addon_rec": "📦 Add-on Purchase Records",
+        "crew_name": "Crew Name / User",
+        "purchase_date": "Purchase Date",
+        "addon_amt": "Add-on Amount (GB)",
+        "add_addon": "➕ Add Add-on",
+        "addon_added": "Add-on added!",
+        "addon_hist": "📋 Add-on History",
+        "admin_panel": "🔒 Admin Panel & Archive",
+        "login_err": "Invalid Login!",
+        "archive_name": "Archive Period Name",
+        "save_archive": "💾 Save Current Month Archive",
+        "archive_saved": "Archive saved!",
+        "status_title": "📊 Starlink Status & Network Comparison",
+        "starlink_rem": "Starlink Remaining Quota",
+        "crew_rem": "Total Crew Remaining Limit",
+        "lost_data": "LOST DATA",
+        "starlink_used": "Starlink Used",
+        "mikrotik_total": "Total MikroTik Users",
+        "hotspot_active": "Active Hotspot",
+        "danger": "⚠️ DANGER: Deficit",
+        "safe": "✅ SAFE: Surplus",
+        "notes": "Backup Allocation Notes",
+        "buffer": "Remaining Buffer",
+        "hotspot_recap": "👥 MikroTik Hotspot User Recapitulation",
+        "fail_conn": "[FAILED] Unable to connect to Mikrotik.",
+        "no_data": "Hotspot data is empty.",
+        "online_users": "🔥 Currently Online Hotspot Users",
+        "no_active": "No active users currently online.",
+        "download_recap": "📥 Download crew hotspot quota usage recapitulation.",
+        "btn_download": "📄 Download Recap (CSV)",
+        "status_exhausted": "EXHAUSTED / NO QUOTA",
+        "status_critical": "CRITICAL",
+        "status_safe": "Safe",
+        "status_active": "Active (Unlimited)",
+        "status_unused": "Unused"
+      }
+    }
+
+def load_audit_logs():
+    if os.path.exists(AUDIT_FILE):
+        with open(AUDIT_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_audit_log(action_desc, admin_user):
+    logs = load_audit_logs()
+    wib_time = datetime.datetime.utcnow() + datetime.timedelta(hours=7)
+    new_log = {
+        "timestamp": wib_time.strftime("%d/%m/%Y %H:%M:%S WIB"),
+        "admin": admin_user,
+        "action": action_desc
+    }
+    logs.insert(0, new_log)
+    with open(AUDIT_FILE, "w") as f:
+        json.dump(logs, f, indent=4)
